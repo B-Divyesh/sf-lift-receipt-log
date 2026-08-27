@@ -11,7 +11,7 @@ the logger into a generic fitness dashboard.
 ## Tokens
 
 Light mode uses `paper #F2EEDB`, `sheet #FFFDF4`, `ink #171814`, `muted #55594F`,
-`signal #F04B23` (safety orange), `signal-ink #FFFFFF`, `plate #1848C7`,
+`signal #F04B23` (safety orange), `signal-ink #171814`, `plate #1848C7`,
 `success #176B43`, `warning #9A5200`, and `danger #B42318`. Dark mode uses
 `floor #171814`, `sheet #23251F`, `ink #F8F4E4`, `muted #BABDAF`,
 `signal #FF6842`, `plate #84A1FF`, and `success #59C98D`. Heavy 2 px ink rules
