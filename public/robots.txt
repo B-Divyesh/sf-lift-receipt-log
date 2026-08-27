@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://lift-receipt-log.sociobot.in/sitemap.xml

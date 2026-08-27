@@ -19,7 +19,7 @@ test('logs a set by keyboard and files an immutable receipt', async ({ page }) =
 
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await expect(page.getByRole('heading', { name: 'Workout receipt' })).toBeVisible();
-  await expect(page.locator('.totals').getByText('1', { exact: true })).toBeVisible();
+  await expect(page.locator('.totals div').first().getByText('1', { exact: true })).toBeVisible();
 
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Log the set. Keep the proof.' })).toBeVisible();

@@ -1,4 +1,4 @@
-const VERSION = 'set-receipt-v2';
+const VERSION = 'set-receipt-__VERSION__';
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 const PRECACHE = __PRECACHE__;
