@@ -1,0 +1,16 @@
+{
+  "name": "Set Receipt — Lift Log",
+  "short_name": "Set Receipt",
+  "description": "A fast, offline set logger and portable workout receipt.",
+  "id": "/",
+  "start_url": "/?v=1",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F2EEDB",
+  "theme_color": "#F2EEDB",
+  "icons": [
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

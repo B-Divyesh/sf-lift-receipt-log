@@ -1,0 +1,9 @@
+{
+  "slug": "lift-receipt-log",
+  "title": "Set Receipt",
+  "artifact_class": "pwa-offline",
+  "user": "Regular lifters who want to record a set as quickly as writing 225x5 in a notebook and retain a compact proof of the workout.",
+  "smallest_useful_product": "Offline PWA with a text grammar for sets, editable exercise aliases, rest timer, and a shareable/printable receipt containing volume, duration, and PRs.",
+  "monetization": "one-time",
+  "constraints": "Local and exportable data; accessible, gym-sized controls; no training or injury advice."
+}
