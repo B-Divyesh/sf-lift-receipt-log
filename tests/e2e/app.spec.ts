@@ -27,6 +27,25 @@ test('logs a set by keyboard and files an immutable receipt', async ({ page }) =
   await expect(page.getByRole('button', { name: /1 sets/ })).toBeVisible();
 });
 
+test('keeps the active exercise for consecutive keyboard entries', async ({ page }) => {
+  const exercise = page.getByLabel('Exercise');
+  const setExpression = page.getByLabel('Weight × reps');
+
+  await exercise.fill('sq');
+  await setExpression.fill('225x5');
+  await setExpression.press('Enter');
+
+  await expect(exercise).toHaveValue('Squat');
+  await expect(setExpression).toBeFocused();
+
+  await setExpression.fill('225x5');
+  await setExpression.press('Enter');
+
+  await expect(page.locator('.set-row')).toHaveCount(2);
+  await expect(page.locator('#entry-error')).toBeEmpty();
+  await expect(setExpression).toBeFocused();
+});
+
 test('shows helpful validation and aliases remain editable', async ({ page }) => {
   await page.getByLabel('Exercise').fill('Bench press');
   await page.getByLabel('Weight × reps').fill('225');

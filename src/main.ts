@@ -193,6 +193,10 @@ async function addSet(form: HTMLFormElement): Promise<void> {
     await persist(`${exercise} ${parsed.weight}${parsed.unit} × ${parsed.reps} logged.`);
     startTimer();
     render();
+    // Re-rendering rebuilds the form. Keep the resolved exercise so the next
+    // keyboard entry is another set for the same lift, just like a paper log.
+    const exerciseInput = document.querySelector<HTMLInputElement>('#exercise');
+    if (exerciseInput) exerciseInput.value = exercise;
     const expression = document.querySelector<HTMLInputElement>('#set-expression');
     if (expression) { expression.value = ''; expression.focus(); }
   } catch (cause) {
