@@ -1,11 +1,12 @@
 # Set Receipt — repair handoff
 
-## Status: repaired and ready for static deployment
+## Status: deployed and verified
 
 **Work order:** `lift-receipt-log-repair-1`
 **Verifier base:** `80dd072e30d584627b59952e504115ac86b6c396`
 **Verifier report commit:** `ebfab4e9c7815ad12367d45e8ca7ac73d8fef913`
 **Functional repair commit:** `e5b63308e6bca28a73f28f2fefb6ac4fd3733c44`
+**Deployed policy commit:** `fda2d65`
 
 ## Release blocker repaired
 
@@ -64,13 +65,26 @@ npm run build
 
 ## Deployment / response-policy note
 
-This remains a static Vite PWA; deploy the generated `dist/` directory with
-the factory's static deployment configuration. The included Azure Static Web
+This remains a static Vite PWA. The factory deployed the generated `dist/`
+directory with `/opt/fleet/lib/deploy-static.sh`; Azure reported deployment
+`2414df82-66b5-406e-b9d7-3416c99b9d8a` successful and the custom domain HTTPS
+endpoint returned 200. The included Azure Static Web
 Apps policy adds an enforcing self-only CSP (the billing API is the sole
 allowed connection), `frame-ancestors 'none'` plus `X-Frame-Options: DENY`, a
 restrictive Permissions-Policy, and one-year immutable caching for `/assets/*`.
-This resolves the verifier's P2 source/deployment-policy finding; the live
-response is checked after deployment.
+This resolves the verifier's P2 source/deployment-policy finding.
+
+Live identity and policy checks passed. The live `index.html` selected
+`assets/index-DQG_8wmy.js`, matching the deployed build, and both live
+`index.html` and `sw.js` had the same SHA-256 as `dist/`. The live document
+returned the CSP, `X-Frame-Options: DENY`, the restrictive Permissions-Policy,
+HSTS, nosniff, and Referrer-Policy; the hashed JavaScript returned
+`Cache-Control: public, max-age=31536000, immutable`. The factory
+`verify-url.sh` smoke check reported 690 ms load time, no browser errors, a
+title/lang/main, one h1, no images missing alt text, and no unlabeled buttons.
+Fresh live desktop and 390 px browser runs both retained `Squat`, kept focus on
+Weight × reps, saved two rows without an error, had zero overflow and console
+errors, and made requests only to `https://lift-receipt-log.sociobot.in`.
 
 ## How to run
 
@@ -81,6 +95,5 @@ npm run build
 npm run preview
 ```
 
-No product gaps remain from the verifier's release-blocking P1. The configured
-response-policy/cache repair is ready to deploy and live-check with this work
-order.
+No product gaps remain from the verifier's release-blocking P1 or its P2
+response-policy/cache finding.
