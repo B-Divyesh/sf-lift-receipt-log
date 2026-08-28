@@ -92,10 +92,27 @@ test('has no serious accessibility violations on core and legal screens', async 
   }
 });
 
-test('reloads and logs while offline after first visit', async ({ page, context }) => {
+test('keeps the visible PR stamp accessible in light and dark logged-workout states', async ({ page }) => {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.evaluate(() => indexedDB.deleteDatabase('set-receipt'));
+    await page.reload();
+    await page.getByLabel('Exercise').fill('dl');
+    await page.getByLabel('Weight × reps').fill('315x3');
+    await page.getByLabel('Weight × reps').press('Enter');
+    await expect(page.getByLabel('Personal record')).toBeVisible();
+
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations.filter((item) => ['serious', 'critical'].includes(item.impact ?? ''))).toEqual([]);
+  }
+});
+
+test('installs despite the production-unavailable host config, then reloads and logs offline', async ({ page, context }) => {
   await page.goto('/');
+  await expect.poll(() => page.evaluate(async () => (await fetch('/staticwebapp.config.json')).status)).toBe(404);
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   await page.reload();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByText('Offline · logging still works')).toBeVisible();

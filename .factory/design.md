@@ -11,10 +11,12 @@ the logger into a generic fitness dashboard.
 ## Tokens
 
 Light mode uses `paper #F2EEDB`, `sheet #FFFDF4`, `ink #171814`, `muted #55594F`,
-`signal #F04B23` (safety orange), `signal-ink #171814`, `plate #1848C7`,
+`signal #F04B23` (safety orange), `signal-ink #171814`, `PR #B42318`, `plate #1848C7`,
 `success #176B43`, `warning #9A5200`, and `danger #B42318`. Dark mode uses
 `floor #171814`, `sheet #23251F`, `ink #F8F4E4`, `muted #BABDAF`,
-`signal #FF6842`, `plate #84A1FF`, and `success #59C98D`. Heavy 2 px ink rules
+`signal/PR #FF6842`, `plate #84A1FF`, and `success #59C98D`. The separate PR
+token keeps the small personal-record stamp at or above 4.5:1 contrast on its
+paper/sheet in either scheme. Heavy 2 px ink rules
 and hard 4 px offset shadows create depth without faux glass or gradients.
 
 Type is deliberately local and operational: **Arial Black / Franklin Gothic

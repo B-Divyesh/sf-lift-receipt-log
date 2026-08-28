@@ -19,6 +19,13 @@ function fileFor(pathname) {
 
 createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', `http://${request.headers.host}`);
+  // Match Azure Static Web Apps: this file configures the host but is not a
+  // public asset. Keeping the test server honest catches failed SW installs.
+  if (url.pathname === '/staticwebapp.config.json') {
+    response.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+    response.end('Not found');
+    return;
+  }
   const file = fileFor(url.pathname);
   try {
     const info = await stat(file);
