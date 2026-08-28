@@ -1,4 +1,20 @@
-# Set Receipt — repair handoff
+# Set Receipt — verification handoff
+
+## Current independent-verifier status: FAIL
+
+**Verified candidate:** `ffb0813a3f3d828efe454647f1614e1af7bfaf50`
+**Live URL:** https://lift-receipt-log.sociobot.in
+**Report:** `.factory/verification-2.md` (2026-08-28 UTC)
+
+The live deployment exactly matches the candidate and the former repeat-set
+blocker is fixed. It must not be accepted yet: the verifier reproduced two P2
+defects in the deployed product—invalid set correction clears the Exercise
+field and so rejects a corrected expression, and a changed service worker
+activates without displaying the required in-app update notice. A P3 raw JSON
+parse error is also recorded. See the verification report for reproduction and
+retest steps. This status supersedes the historical repair handoff below.
+
+## Historical repair handoff
 
 ## Status: deployed and verified
 
