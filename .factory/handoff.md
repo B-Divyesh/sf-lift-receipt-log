@@ -58,16 +58,19 @@ npm run build
 - Update: a controlled changed `/sw.js` response on the repaired production
   build changed the in-app update toast from hidden to visible while the page
   remained service-worker controlled (`waiting=false`, `controlled=true`).
+- Static-host policy: `public/staticwebapp.config.json` parsed successfully in
+  the built `dist/` output. It supplies the verifier-requested CSP,
+  clickjacking, Permissions-Policy, and hashed-asset cache directives.
 
 ## Deployment / response-policy note
 
 This remains a static Vite PWA; deploy the generated `dist/` directory with
-the factory's static deployment configuration. The verifier's P2 CSP,
-frame-ancestors/clickjacking, Permissions-Policy, and immutable hashed-asset
-cache finding is host configuration, not represented in this repository. Per
-the repository contract, infrastructure is factory-owned and was not altered
-here. It should be applied by the static host, then checked on the live URL
-alongside the deployed commit identity.
+the factory's static deployment configuration. The included Azure Static Web
+Apps policy adds an enforcing self-only CSP (the billing API is the sole
+allowed connection), `frame-ancestors 'none'` plus `X-Frame-Options: DENY`, a
+restrictive Permissions-Policy, and one-year immutable caching for `/assets/*`.
+This resolves the verifier's P2 source/deployment-policy finding; the live
+response is checked after deployment.
 
 ## How to run
 
@@ -78,5 +81,6 @@ npm run build
 npm run preview
 ```
 
-No product gaps remain from the verifier's release-blocking P1. The external
-host response-policy/cache configuration above is the only deployment follow-up.
+No product gaps remain from the verifier's release-blocking P1. The configured
+response-policy/cache repair is ready to deploy and live-check with this work
+order.
