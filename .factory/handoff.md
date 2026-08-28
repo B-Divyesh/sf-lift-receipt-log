@@ -82,6 +82,8 @@ HSTS, nosniff, and Referrer-Policy; the hashed JavaScript returned
 `Cache-Control: public, max-age=31536000, immutable`. The factory
 `verify-url.sh` smoke check reported 690 ms load time, no browser errors, a
 title/lang/main, one h1, no images missing alt text, and no unlabeled buttons.
+Lighthouse 13 mobile against the live URL scored Performance 99, Accessibility
+100, Best Practices 100, and SEO 100 (LCP 1,205 ms, CLS 0, TBT 94 ms).
 Fresh live desktop and 390 px browser runs both retained `Squat`, kept focus on
 Weight × reps, saved two rows without an error, had zero overflow and console
 errors, and made requests only to `https://lift-receipt-log.sociobot.in`.
