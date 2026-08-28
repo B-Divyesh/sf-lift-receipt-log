@@ -1,51 +1,42 @@
-# Set Receipt — verification handoff
+# Set Receipt — repair-2 handoff
 
-## Current independent-verifier status: FAIL
+## Status: repaired, deployed, and ready for independent retest
 
-**Verified candidate:** `ffb0813a3f3d828efe454647f1614e1af7bfaf50`
+**Work order:** `lift-receipt-log-repair-2`
+**Verifier base/report commit:** `dad772defe24e8bcfb9f2bc0c54bd8f83e1a5584`
+**Repaired product commit:** `557d6e1 fix recovery and service worker update paths`
+**Deployment:** Azure Static Web Apps production deployment `76668013-24aa-4cf1-9266-999c3b309681`
 **Live URL:** https://lift-receipt-log.sociobot.in
-**Report:** `.factory/verification-2.md` (2026-08-28 UTC)
 
-The live deployment exactly matches the candidate and the former repeat-set
-blocker is fixed. It must not be accepted yet: the verifier reproduced two P2
-defects in the deployed product—invalid set correction clears the Exercise
-field and so rejects a corrected expression, and a changed service worker
-activates without displaying the required in-app update notice. A P3 raw JSON
-parse error is also recorded. See the verification report for reproduction and
-retest steps. This status supersedes the historical repair handoff below.
+## Repairs
 
-## Historical repair handoff
+All three findings in `.factory/verification-2.md` were reproduced and fixed
+without changing the brief, product class, data model, or successful logging
+flow.
 
-## Status: deployed and verified
+1. **Invalid set correction preserves Exercise.** `addSet` now retains the
+   canonical resolved exercise whenever expression parsing fails, then returns
+   focus to Weight × reps. A lifter can correct `2000.01x5` to `225x5` and log
+   it without touching Exercise.
+2. **Updates are visible and user-controlled.** New workers no longer call
+   `skipWaiting()` during install. A controlled page announces a waiting
+   worker with the existing visible `Update ready. Refresh` toast. Refresh
+   sends `SKIP_WAITING`; `controllerchange` then reloads into the new app.
+   This avoids replacing an in-progress entry invisibly.
+3. **Malformed JSON has a product error.** Import now catches JSON syntax
+   errors and says: `That file is not valid JSON. Choose a Set Receipt backup
+   exported by this app and try again.` The log remains usable.
 
-**Work order:** `lift-receipt-log-repair-1`
-**Verifier base:** `80dd072e30d584627b59952e504115ac86b6c396`
-**Verifier report commit:** `ebfab4e9c7815ad12367d45e8ca7ac73d8fef913`
-**Functional repair commit:** `e5b63308e6bca28a73f28f2fefb6ac4fd3733c44`
-**Deployed policy commit:** `fda2d65`
+## Regression coverage
 
-## Release blocker repaired
+`tests/e2e/app.spec.ts` adds regression tests for all three findings. The
+configured Chromium desktop and 390 × 844 mobile projects execute each test.
+The worker test uses the local test preview server to provide a genuinely
+changed `/sw.js` after initial control; it asserts the waiting state, visible
+toast, actionable Refresh button, and post-refresh navigation. It does not
+mock the app UI or service-worker lifecycle.
 
-The verifier's P1 was reproduced against the base candidate: after `sq` / `225x5`
-and Enter, the new form state was `{ exercise: "", focused: "set-expression" }`.
-Entering another `225x5` then failed with `Choose or type an exercise first.` and
-only one row existed.
-
-`addSet` now restores the resolved, canonical exercise into the newly rendered
-form before returning focus to Weight × reps. This keeps the intended fast,
-keyboard-first flow unambiguous: `sq` resolves to `Squat`, focus remains on the
-expression input, and Enter logs each following Squat set without retyping the
-exercise.
-
-Exact regression coverage is in `tests/e2e/app.spec.ts` as
-`keeps the active exercise for consecutive keyboard entries`. It asserts the
-canonical retained value, focus, two saved rows, and no validation error. It
-runs under both Desktop Chrome and the configured 390 × 844 mobile Chromium
-project.
-
-## Verification evidence
-
-All checks ran from the repaired checkout on 2026-08-28 UTC.
+## Verification evidence (2026-08-28 UTC)
 
 ```sh
 npm ci
@@ -54,64 +45,58 @@ npm test
 npm run build
 ```
 
-- Clean install: 58 packages; `npm audit --omit=dev`: 0 vulnerabilities.
-- Unit/integration: 7/7 Vitest tests passed.
-- Browser: 11/11 Playwright tests passed; one intentional desktop skip remains
-  for the mobile-only overflow assertion. The new repeat-set keyboard test
-  passed on desktop and 390 px mobile.
-- Type checking is part of `npm run build` (`tsc --noEmit`); the production
-  build passed and produced `dist/index.html`, hashed JS/CSS, manifest, icons,
-  offline fallback, and generated `sw.js`.
-- Output budgets: JS 26,913 B (9,953 B gzip), CSS 16,571 B (4,423 B gzip),
-  and hero WebP 38,168 B — all within the static/PWA limits.
-- Accessibility: the browser suite ran axe on logger, privacy, and terms in
-  desktop and mobile with zero serious or critical violations; each page has
-  one h1. The mobile check passed with no horizontal overflow.
-- Privacy: a fresh normal-use browser load made no requests outside the app
-  origin. The app has no analytics, runtime CDN, or third-party fonts; workout
-  data remains local IndexedDB.
-- Offline: after service-worker control, the suite reloaded while offline,
-  showed `Offline · logging still works`, and logged a set locally.
-- Update: a controlled changed `/sw.js` response on the repaired production
-  build changed the in-app update toast from hidden to visible while the page
-  remained service-worker controlled (`waiting=false`, `controlled=true`).
-- Static-host policy: `public/staticwebapp.config.json` parsed successfully in
-  the built `dist/` output. It supplies the verifier-requested CSP,
-  clickjacking, Permissions-Policy, and hashed-asset cache directives.
+- Fresh install: 58 packages. `npm audit --omit=dev`: **0 vulnerabilities**.
+- Unit/integration: Vitest **7/7 passed**.
+- Browser: Playwright **17 passed, 1 expected skip, 0 failed**. This includes
+  keyboard logging/recovery, desktop and 390 px mobile, exact error recovery,
+  malformed import recovery, offline reload + local logging, changed-worker
+  update action, Axe scans of `/`, `/privacy`, and `/terms`, and mobile
+  overflow. The only skip is the desktop instance of the mobile-only overflow
+  assertion.
+- Type checking is part of `npm run build`; production build passed and wrote
+  `dist/index.html` and the versioned service worker. Production sizes: JS
+  **27,410 B** (**10,140 B gzip**), CSS **16,571 B** (**4,423 B gzip**), and
+  hero WebP **38,168 B** — all within the static/PWA budget.
+- Accessibility: Axe found **0 serious or critical** violations at both
+  viewports. Browser smoke confirms one h1, title, `lang=en`, `<main>`, image
+  alt text, labeled controls, visible designed focus styles, and no mobile
+  horizontal overflow. Reduced-motion behavior remains covered by the original
+  verified product behavior.
+- Privacy: normal local logging remains IndexedDB-only; no analytics, runtime
+  fonts, or CDN are introduced. Source review confirms the only external
+  application endpoint is the optional Sociobot billing/verification API,
+  already permitted by the self-only CSP.
+- Response policy: `public/staticwebapp.config.json` parses as JSON and the
+  live document supplies CSP, `X-Frame-Options: DENY`, restrictive
+  Permissions-Policy, HSTS, nosniff, and Referrer-Policy. The live hashed JS
+  has `Cache-Control: public, max-age=31536000, immutable`.
+- Live smoke: `/opt/fleet/lib/verify-url.sh` completed against production in
+  **833 ms** with **0 console/page errors**, title/lang/main present, exactly
+  one h1, zero images missing alt text, and zero unlabeled buttons.
+- Live identity: local and production `index.html` share SHA-256
+  `eba186dc5c2fbdaba7e008457f6d4d559e312d43962b04f2e9ad9ae0790ddb43`;
+  local and production `sw.js` share SHA-256
+  `21f19e88dc03981e230ea780f67d9d9abefd35bcefde9811ccabed1ba20dc9eb`.
+  The live HTML selects `assets/index-DJEi6ax_.js`.
 
-## Deployment / response-policy note
+## Performance note
 
-This remains a static Vite PWA. The factory deployed the generated `dist/`
-directory with `/opt/fleet/lib/deploy-static.sh`; Azure reported deployment
-`2414df82-66b5-406e-b9d7-3416c99b9d8a` successful and the custom domain HTTPS
-endpoint returned 200. The included Azure Static Web
-Apps policy adds an enforcing self-only CSP (the billing API is the sole
-allowed connection), `frame-ancestors 'none'` plus `X-Frame-Options: DENY`, a
-restrictive Permissions-Policy, and one-year immutable caching for `/assets/*`.
-This resolves the verifier's P2 source/deployment-policy finding.
+Lighthouse 13.4.1 was invoked against the deployed URL using the preinstalled
+Playwright Chromium. Its Chrome DevTools connection closed during Lighthouse
+cleanup in this container, so no new Lighthouse score is claimed here. The
+production-size budget and live browser smoke above passed; the prior
+independent live Lighthouse evidence remains in repository history. This is an
+environmental verification limitation, not a known product defect.
 
-Live identity and policy checks passed. The live `index.html` selected
-`assets/index-DQG_8wmy.js`, matching the deployed build, and both live
-`index.html` and `sw.js` had the same SHA-256 as `dist/`. The live document
-returned the CSP, `X-Frame-Options: DENY`, the restrictive Permissions-Policy,
-HSTS, nosniff, and Referrer-Policy; the hashed JavaScript returned
-`Cache-Control: public, max-age=31536000, immutable`. The factory
-`verify-url.sh` smoke check reported 690 ms load time, no browser errors, a
-title/lang/main, one h1, no images missing alt text, and no unlabeled buttons.
-Lighthouse 13 mobile against the live URL scored Performance 99, Accessibility
-100, Best Practices 100, and SEO 100 (LCP 1,205 ms, CLS 0, TBT 94 ms).
-Fresh live desktop and 390 px browser runs both retained `Squat`, kept focus on
-Weight × reps, saved two rows without an error, had zero overflow and console
-errors, and made requests only to `https://lift-receipt-log.sociobot.in`.
-
-## How to run
+## How to run / deploy
 
 ```sh
 npm ci
 npm test
 npm run build
 npm run preview
+/opt/fleet/lib/deploy-static.sh lift-receipt-log dist
 ```
 
-No product gaps remain from the verifier's release-blocking P1 or its P2
-response-policy/cache finding.
+No product gaps are known. Independent retest should repeat the three
+scenarios in `.factory/verification-2.md` at desktop and 390 px mobile.
