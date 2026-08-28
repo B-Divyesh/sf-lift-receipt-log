@@ -17,6 +17,9 @@ let restTimer: number | undefined;
 let isPro = false;
 let undoSet: { workoutId: string; set: LiftSet; index: number } | null = null;
 let undoTimeout: number | undefined;
+let serviceWorkerRegistration: ServiceWorkerRegistration | undefined;
+let updateAvailable = false;
+let refreshAfterUpdate = false;
 
 const escapeHtml = (value: unknown) => String(value)
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -38,7 +41,7 @@ function shell(content: string, page: 'app' | 'legal' = 'app'): string {
   ${content}
   <footer><p>Private by default. No account, feed, or tracking.</p><nav aria-label="Legal"><a href="/privacy" data-route="privacy">Privacy</a><a href="/terms" data-route="terms">Terms</a></nav><p class="disclosure">Editorial image generated for Set Receipt.</p></footer>
   <div class="toast ${status || error ? 'show' : ''}" role="status" aria-live="polite">${escapeHtml(error || status)}${undoSet ? ' <button data-action="undo-delete">Undo</button>' : ''}</div>
-  <div class="update-toast" id="update-toast" role="status" hidden>Update ready. <button data-action="refresh-app">Refresh</button></div>`;
+  <div class="update-toast" id="update-toast" role="status"${updateAvailable ? '' : ' hidden'}>Update ready. <button data-action="refresh-app">Refresh</button></div>`;
 }
 
 function renderLoading(): void {
@@ -181,8 +184,10 @@ function isPersonalRecord(exercise: string, weight: number, unit: 'lb' | 'kg'): 
 async function addSet(form: HTMLFormElement): Promise<void> {
   error = ''; status = '';
   const formData = new FormData(form);
+  let resolvedExercise = '';
   try {
     const exercise = canonicalExercise(String(formData.get('exercise') ?? ''), data.aliases);
+    resolvedExercise = exercise;
     const parsed = parseSet(String(formData.get('set') ?? ''), data.settings.unit);
     let workout = activeWorkout();
     if (!workout) {
@@ -202,6 +207,10 @@ async function addSet(form: HTMLFormElement): Promise<void> {
   } catch (cause) {
     error = cause instanceof Error ? cause.message : 'Could not log that set.';
     render();
+    // A parser error should not make a lifter re-enter the lift they just
+    // resolved. Keep the canonical value while they correct the expression.
+    const exerciseInput = document.querySelector<HTMLInputElement>('#exercise');
+    if (resolvedExercise && exerciseInput) exerciseInput.value = resolvedExercise;
     document.querySelector<HTMLInputElement>(error.startsWith('Choose') ? '#exercise' : '#set-expression')?.focus();
   }
 }
@@ -258,7 +267,10 @@ app.addEventListener('change', async (event) => {
   if (target.dataset.note) { const workout = data.workouts.find((item) => item.id === target.dataset.note); if (workout && isPro) { workout.note = target.value.trim(); await persist('Receipt note saved.'); } }
   if (target.id === 'import-file' && target instanceof HTMLInputElement && target.files?.[0]) {
     try {
-      const imported = validateImport(JSON.parse(await target.files[0].text()));
+      const fileText = await target.files[0].text();
+      let backup: unknown;
+      try { backup = JSON.parse(fileText); } catch { throw new Error('That file is not valid JSON. Choose a Set Receipt backup exported by this app and try again.'); }
+      const imported = validateImport(backup);
       if (!confirm(`Replace this device’s log with ${imported.workouts.length} imported workout(s)?`)) return;
       data = imported; await persist('Backup imported.'); render();
     } catch (cause) { error = cause instanceof Error ? cause.message : 'Could not read that backup.'; render(); }
@@ -297,7 +309,15 @@ app.addEventListener('click', async (event) => {
     case 'export-csv': download(`set-receipt-${new Date().toISOString().slice(0, 10)}.csv`, csvText(data.workouts), 'text/csv'); status = 'CSV exported.'; render(); break;
     case 'erase-data': if (confirm(`Erase ${data.workouts.length} workout(s), all aliases, and settings from this device? Export first if you need a backup.`)) { data = structuredClone({ ...data, workouts: [], aliases: DEFAULT_ALIASES }); await persist('All local workout data erased.'); view = 'log'; render(); } break;
     case 'verify-license': isPro = await verifyLicense(true); status = isPro ? 'License is active.' : ''; error = isPro ? '' : 'License is no longer active.'; render(); break;
-    case 'refresh-app': location.reload(); break;
+    case 'refresh-app': {
+      const waiting = serviceWorkerRegistration?.waiting;
+      if (!waiting) { location.reload(); break; }
+      refreshAfterUpdate = true;
+      updateAvailable = false;
+      document.querySelector<HTMLElement>('#update-toast')!.hidden = true;
+      waiting.postMessage({ type: 'SKIP_WAITING' });
+      break;
+    }
   }
 });
 
@@ -308,10 +328,23 @@ window.addEventListener('offline', render);
 async function registerServiceWorker(): Promise<void> {
   if (!('serviceWorker' in navigator) || import.meta.env.DEV) return;
   const registration = await navigator.serviceWorker.register('/sw.js');
-  if (registration.waiting) document.querySelector<HTMLElement>('#update-toast')!.hidden = false;
-  registration.addEventListener('updatefound', () => registration.installing?.addEventListener('statechange', () => {
-    if (registration.waiting && navigator.serviceWorker.controller) document.querySelector<HTMLElement>('#update-toast')!.hidden = false;
-  }));
+  serviceWorkerRegistration = registration;
+  const announceUpdate = () => {
+    if (!registration.waiting || !navigator.serviceWorker.controller) return;
+    updateAvailable = true;
+    const toast = document.querySelector<HTMLElement>('#update-toast');
+    if (toast) toast.hidden = false;
+  };
+  announceUpdate();
+  registration.addEventListener('updatefound', () => {
+    const installing = registration.installing;
+    installing?.addEventListener('statechange', () => {
+      if (installing.state === 'installed') announceUpdate();
+    });
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshAfterUpdate) location.reload();
+  });
 }
 
 async function init(): Promise<void> {

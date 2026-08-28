@@ -59,6 +59,30 @@ test('shows helpful validation and aliases remain editable', async ({ page }) =>
   await expect(page.getByText('→ Romanian deadlift')).toBeVisible();
 });
 
+test('keeps the exercise while correcting an invalid set expression', async ({ page }) => {
+  const exercise = page.getByLabel('Exercise');
+  const setExpression = page.getByLabel('Weight × reps');
+
+  await exercise.fill('sq');
+  await setExpression.fill('2000.01x5');
+  await setExpression.press('Enter');
+
+  await expect(page.locator('#entry-error')).toHaveText('Weight must be between 0 and 2,000.');
+  await expect(exercise).toHaveValue('Squat');
+  await expect(setExpression).toBeFocused();
+
+  await setExpression.fill('225x5');
+  await setExpression.press('Enter');
+  await expect(page.locator('.set-row')).toHaveCount(1);
+  await expect(page.locator('#entry-error')).toBeEmpty();
+});
+
+test('explains how to recover from an invalid JSON import', async ({ page }) => {
+  await page.getByRole('button', { name: 'Setup' }).click();
+  await page.locator('#import-file').setInputFiles('tests/fixtures/not-a-backup.json');
+  await expect(page.locator('.toast')).toContainText('That file is not valid JSON. Choose a Set Receipt backup exported by this app and try again.');
+});
+
 test('has no serious accessibility violations on core and legal screens', async ({ page }) => {
   for (const path of ['/', '/privacy', '/terms']) {
     await page.goto(path);
@@ -79,6 +103,28 @@ test('reloads and logs while offline after first visit', async ({ page, context 
   await page.getByLabel('Weight × reps').fill('315x3');
   await page.getByLabel('Weight × reps').press('Enter');
   await expect(page.locator('.set-list').getByText('315lb × 3', { exact: true })).toBeVisible();
+});
+
+test('offers an actionable notice for a waiting service-worker update', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+
+  await page.evaluate(() => { document.cookie = 'set-receipt-test-update=1; path=/'; });
+  await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration())?.update(); });
+  await expect.poll(() => page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.getRegistration();
+    return registration?.waiting?.state ?? registration?.installing?.state ?? 'none';
+  })).toBe('installed');
+
+  const updateToast = page.locator('#update-toast');
+  await expect(updateToast).toBeVisible();
+  await expect(updateToast.getByRole('button', { name: 'Refresh' })).toBeVisible();
+  const navigation = page.waitForEvent('framenavigated', (frame) => frame === page.mainFrame());
+  await updateToast.getByRole('button', { name: 'Refresh' }).click();
+  await navigation;
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
 });
 
 test('mobile viewport has no horizontal page overflow', async ({ page }, testInfo) => {
