@@ -1,6 +1,6 @@
 # Set Receipt — repair handoff
 
-## Status: repaired and ready to deploy
+## Status: deployed and verified
 
 This repair starts from verifier report commit
 `c7547784940c4f11e9566732778b7697f16b1b70` for candidate
