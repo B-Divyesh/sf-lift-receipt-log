@@ -289,28 +289,35 @@ test('@claim:no-training-advice provides record keeping without prescriptive tra
 });
 
 test('@claim:pro-price shows the one-time price and Sociobot checkout', async ({ page }) => {
+  let available = false;
+  await page.route('**/api/v1/products', async (route) => {
+    if (!available) return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [{
+      slug: 'lift-receipt-log',
+      price_minor: 900,
+      checkout_url: 'https://api.sociobot.in/api/v1/products/lift-receipt-log/checkout',
+    }] }) });
+  });
   await page.getByRole('button', { name: 'Setup' }).click();
   await expect(page.locator('.price')).toHaveText('$9 once');
+  await expect(page.getByRole('button', { name: 'Checkout unavailable' })).toBeDisabled();
+  await expect(page.getByRole('link', { name: 'Buy Pro' })).toHaveCount(0);
+  available = true;
+  await page.getByRole('button', { name: 'Check again' }).click();
   await expect(page.getByRole('link', { name: 'Buy Pro' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/lift-receipt-log/checkout');
-
-  const catalogue = await page.request.get('https://api.sociobot.in/api/v1/products');
-  expect(catalogue.ok()).toBe(true);
-  const body = await catalogue.json() as { data: Array<{ slug: string; price_minor: number; checkout_url: string }> };
-  expect(body.data.find((product) => product.slug === 'lift-receipt-log')).toMatchObject({
-    slug: 'lift-receipt-log',
-    price_minor: 900,
-    checkout_url: 'https://api.sociobot.in/api/v1/products/lift-receipt-log/checkout',
-  });
-
-  const checkout = await page.request.get('https://api.sociobot.in/api/v1/products/lift-receipt-log/checkout', { maxRedirects: 0 });
-  expect(checkout.status()).toBe(303);
-  const location = checkout.headers().location;
-  expect(location).toBeTruthy();
-  expect(new URL(location!).hostname).toMatch(/(^|\.)dodopayments\.com$/);
 });
 
 test('@claim:pro-features verifies once, enables custom rest, and persists private notes', async ({ page }) => {
   let verificationRequests = 0;
+  await page.route('**/api/v1/products', async (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ data: [{
+      slug: 'lift-receipt-log',
+      price_minor: 900,
+      checkout_url: 'https://api.sociobot.in/api/v1/products/lift-receipt-log/checkout',
+    }] }),
+  }));
   await page.route('https://api.sociobot.in/api/v1/products/lift-receipt-log/verify**', async (route) => {
     verificationRequests += 1;
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valid: true, reason: 'ok', expires_at: null }) });

@@ -16,7 +16,7 @@ request origins, console output, and serious/critical Axe results.
 | --- | --- | --- |
 | F-1-1 | Kept the job headline, audience, sample action, outcome, facts, and full set form above the 390 × 844 fold. | `mobile first screen exposes…` · `test-results/evidence/mobile-first-screen.png` · cold `/` geometry passed |
 | F-1-2 | Kept the active sample receipt before entry controls in demo mode. | `@claim:demo-sandbox` · `test-results/evidence/mobile-demo-first-screen.png` · first row visible on `/?demo=1` |
-| F-1-3 | Kept the registered $9 Sociobot checkout and live catalogue/redirect checks. | `@claim:pro-price` · root screenshot · live checkout catalogue 900 cents and 303 redirect passed |
+| F-1-3 | Setup now checks the registered 900-cent catalogue entry before showing Buy Pro; an outage shows a disabled state and retry action. | `@claim:pro-price` covers recorded 503 and 200 responses · root screenshot · live Setup reflects the current endpoint state |
 | F-1-4 | Demo exit deletes its IndexedDB database; re-entry reseeds three rows while the real row survives. | `@claim:demo-sandbox` · live demo screenshot · cold edit/reset/exit/re-entry passed |
 | F-1-5 | Route H1s remain focusable and focus after links, Back, and Forward with a polite announcement. | `moves focus and announces…` · live root screenshot · live Privacy/Back focus passed |
 | F-1-6 | Preserved How it works, limits, and paid sections after the live logger. | `sets route titles…` · root screenshot · live `/` content scan passed |
@@ -86,8 +86,8 @@ The final live verifier reports zero serious/critical Axe violations.
   projects (28 claim executions).
 - Clean-clone `npm test`: 7 unit tests and 51 browser tests passed; 3
   project-specific tests were intentionally skipped.
-- `npm run build`: `dist/` created; initial JS 33.84 kB raw / 11.72 kB gzip;
-  CSS 18.71 kB raw / 4.86 kB gzip.
+- `npm run build`: `dist/` created; initial JS 34.78 kB raw / 11.98 kB gzip;
+  CSS 18.80 kB raw / 4.88 kB gzip.
 - Mobile Lighthouse on `/?demo=1`: Performance 100, Accessibility 100, Best
   Practices 100, SEO 100; LCP 1.4 s, CLS 0, TBT 0 ms.
 - `/opt/fleet/lib/verify-url.sh` passed the live root and demo with HTTP 200,

@@ -27,6 +27,9 @@ One-click demo: <https://lift-receipt-log.sociobot.in/?demo=1>
 - Expanded browser checks across root, demo, Receipts, Setup, demo Setup,
   Privacy, Terms, and 404 in light and dark modes. This exposed and fixed Pro
   panel and custom-rest button contrast in dark mode.
+- Added a fail-soft checkout availability check. Setup shows Buy Pro only after
+  validating the registered 900-cent product; service outages show a disabled
+  checkout state with a retry action while the free logger keeps working.
 - Added `npm run verify:live` for repeatable cold production checks covering
   first-screen geometry, demo isolation, focus, routing, metadata, privacy,
   offline use, console errors, and serious/critical Axe findings.
@@ -43,8 +46,8 @@ One-click demo: <https://lift-receipt-log.sociobot.in/?demo=1>
   passed; 51 Playwright tests passed with 3 expected project-specific skips.
 - Final local `npm test`: the expanded accessibility matrix passed after the
   contrast repair.
-- Final `npm run build`: `dist/` produced; initial JS 33.84 kB raw / 11.72 kB
-  gzip and CSS 18.71 kB raw / 4.86 kB gzip.
+- Final `npm run build`: `dist/` produced; initial JS 34.78 kB raw / 11.98 kB
+  gzip and CSS 18.80 kB raw / 4.88 kB gzip.
 - Local URL verifier: HTTP 200, no console errors, `lang=en`, one H1, one main,
   no missing image alt, and no unlabeled buttons.
 - Mobile Lighthouse on `http://127.0.0.1:4173/?demo=1`: Performance 100,

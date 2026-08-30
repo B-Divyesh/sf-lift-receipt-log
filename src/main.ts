@@ -21,6 +21,7 @@ let undoTimeout: number | undefined;
 let serviceWorkerRegistration: ServiceWorkerRegistration | undefined;
 let updateAvailable = false;
 let refreshAfterUpdate = false;
+let checkoutState: 'unknown' | 'checking' | 'available' | 'unavailable' = 'unknown';
 const demoMode = location.pathname === '/demo' || routeParameters.get('demo') === '1';
 const storageNamespace: StorageNamespace = demoMode ? 'demo' : 'real';
 const demoEntryPath = '/?demo=1';
@@ -45,7 +46,7 @@ function shell(content: string, page: 'app' | 'legal' = 'app'): string {
   <div class="network-status" id="network-status" role="status">${navigator.onLine ? 'Saved in this browser' : 'Offline · logging still works'}</div>
   ${demoMode ? '<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved to your log</strong><div><button data-action="reset-demo">Reset demo</button><button data-action="exit-demo">Start for real</button></div></aside>' : ''}
   ${content}
-  <footer><p>Workout data stays in this browser. License checks use Sociobot.</p><nav aria-label="Legal"><a href="/privacy" data-route="privacy">Privacy</a><a href="/terms" data-route="terms">Terms</a></nav><p class="disclosure">Built by Param Factory · v1.0.0 · Generated editorial image.</p></footer>
+  <footer><p>Workout data stays in this browser. Pro checks use Sociobot.</p><nav aria-label="Legal"><a href="/privacy" data-route="privacy">Privacy</a><a href="/terms" data-route="terms">Terms</a></nav><p class="disclosure">Built by Param Factory · v1.0.0 · Generated editorial image.</p></footer>
   <div class="toast ${status || error ? 'show' : ''}" role="status" aria-live="polite">${escapeHtml(error || status)}${undoSet ? ' <button data-action="undo-delete">Undo</button>' : ''}</div>
   <div class="route-announcement" aria-live="polite" aria-atomic="true">${escapeHtml(routeName())}</div>
   <div class="update-toast" id="update-toast" role="status"${updateAvailable ? '' : ' hidden'}>Update ready. <button data-action="refresh-app">Refresh</button></div>`;
@@ -58,7 +59,7 @@ function renderLoading(): void {
 function renderLegal(kind: 'privacy' | 'terms'): void {
   const privacy = `<main id="main" class="legal"><p class="eyebrow">WORKOUT AND LICENSE DATA</p><h1>Privacy</h1>
     <p><strong>Your workout log stays in this browser.</strong> Set Receipt stores workouts, aliases, and preferences in this browser. Ordinary logging does not send workout data to us.</p>
-    <h2>What leaves your browser</h2><p>If you choose Pro, the browser sends your license token to Sociobot to check it. The checkout link opens a hosted Sociobot payment page.</p>
+    <h2>What leaves your browser</h2><p>Opening Setup checks whether Sociobot checkout is available. This sends no workout data. If you use Pro, your license token is also checked there.</p>
     <h2>Your controls</h2><p>You can export a complete JSON backup or CSV, import a backup, and erase local workout data from Setup. You can also remove a saved license there. Shared or printed receipts leave the app only when you choose.</p>
     <h2>Contact</h2><p>Questions can be sent through <a href="https://sociobot.in">sociobot.in</a>. Effective 27 August 2026.</p></main>`;
   const terms = `<main id="main" class="legal"><p class="eyebrow">USE AND PRO LICENSE TERMS</p><h1>Terms</h1>
@@ -118,7 +119,7 @@ function landingSections(): string {
   return `<section class="landing-sections" aria-label="Set Receipt details">
     <section><p class="eyebrow">HOW IT WORKS</p><h2>Log a workout in three steps</h2><ol><li><strong>Enter</strong> an exercise and weight × reps.</li><li><strong>Rest</strong> with the timer that starts after each set.</li><li><strong>Finish</strong> the workout to file and share its receipt.</li></ol></section>
     <section><p class="eyebrow">PRIVACY AND LIMITS</p><h2>What Set Receipt does not do</h2><p>It does not give training or injury advice. Workout data stays in this browser until you export or share it.</p></section>
-    <section class="landing-pro"><p class="eyebrow">PRO FEATURES</p><h2>Set Receipt Pro: $9 once</h2><p>Pro adds custom rest intervals and private notes on finished receipts.</p><a class="primary-button" href="${CHECKOUT_URL}">Buy Pro</a><p><a href="/privacy" data-route="privacy">Privacy</a> · <a href="/terms" data-route="terms">Terms</a></p></section>
+    <section class="landing-pro"><p class="eyebrow">PRO FEATURES</p><h2>Set Receipt Pro: $9 once</h2><p>Pro adds custom rest intervals and private notes on finished receipts.</p><button class="primary-button" data-view="settings">See Pro purchase</button><p><a href="/privacy" data-route="privacy">Privacy</a> · <a href="/terms" data-route="terms">Terms</a></p></section>
   </section>`;
 }
 
@@ -143,11 +144,16 @@ function historyView(): string {
 }
 
 function settingsView(): string {
+  const checkoutControl = checkoutState === 'available'
+    ? `<a class="primary-button" href="${CHECKOUT_URL}">Buy Pro</a>`
+    : checkoutState === 'unavailable'
+      ? '<div class="checkout-status" role="status"><button class="primary-button" disabled>Checkout unavailable</button><button class="secondary-button" data-action="retry-checkout">Check again</button><p>Your workout log still works. Try checkout again later.</p></div>'
+      : '<div class="checkout-status" role="status"><button class="primary-button" disabled>Checking checkout…</button></div>';
   return `<main id="main" class="settings-page"><div class="page-heading"><div><p class="eyebrow">LOGGING, DATA, AND PRO</p><h1>Setup</h1></div></div>
     <div class="settings-grid"><section><h2>Logging defaults</h2><fieldset><legend>Default unit</legend><label><input type="radio" name="unit" value="lb" ${data.settings.unit === 'lb' ? 'checked' : ''}> Pounds (lb)</label><label><input type="radio" name="unit" value="kg" ${data.settings.unit === 'kg' ? 'checked' : ''}> Kilograms (kg)</label></fieldset><label for="rest-select">Rest timer</label><select id="rest-select" data-setting="rest"><option value="60" ${data.settings.restSeconds === 60 ? 'selected' : ''}>1 minute</option><option value="90" ${data.settings.restSeconds === 90 ? 'selected' : ''}>1½ minutes</option><option value="120" ${data.settings.restSeconds === 120 ? 'selected' : ''}>2 minutes</option><option value="180" ${data.settings.restSeconds === 180 ? 'selected' : ''}>3 minutes</option>${!['60','90','120','180'].includes(String(data.settings.restSeconds)) ? `<option value="${data.settings.restSeconds}" selected>${data.settings.restSeconds} seconds</option>` : ''}</select>${isPro ? `<form id="custom-rest-form" class="inline-form"><label for="custom-rest">Custom seconds</label><input id="custom-rest" type="number" min="15" max="900" value="${data.settings.restSeconds}"><button>Save rest time</button></form>` : '<p class="form-help">Pro adds any custom rest interval.</p>'}</section>
       <section><div class="section-title"><div><h2>Exercise aliases</h2><p>Type the short code in the exercise box.</p></div></div><form id="alias-form" class="alias-form"><label for="alias-code">Short code<input id="alias-code" maxlength="12" placeholder="rdl" required></label><label for="alias-exercise">Exercise<input id="alias-exercise" maxlength="48" placeholder="Romanian deadlift" required></label><button class="secondary-button">Add alias</button></form><ul class="alias-list">${data.aliases.map((item) => `<li><code>${escapeHtml(item.alias)}</code><span>→ ${escapeHtml(item.exercise)}</span><button data-delete-alias="${escapeHtml(item.id)}" aria-label="Delete ${escapeHtml(item.alias)} alias" ${DEFAULT_ALIASES.some((base) => base.id === item.id) ? 'title="Default alias"' : ''}>×</button></li>`).join('')}</ul></section>
       <section><h2>Your data</h2><p>Back up or move every workout. Export is always free.</p><div class="stack-actions"><button class="secondary-button" data-action="export-json">Export JSON</button><button class="secondary-button" data-action="export-csv">Export CSV</button><label class="file-button">Import JSON<input id="import-file" type="file" accept="application/json,.json"></label><button class="danger-button" data-action="erase-data">Erase all local data</button></div><p class="form-help">Import replaces this browser’s log after confirmation.</p></section>
-      <section class="pro-panel"><p class="eyebrow">PRO FEATURES</p><h2>Set Receipt Pro</h2><p class="price"><strong>$9</strong> once</p><ul><li>Custom rest intervals</li><li>Private notes on receipts</li></ul>${isPro ? (demoMode ? '<p class="license-active">✓ Pro sample features are on in demo.</p>' : '<p class="license-active">✓ Pro is active in this browser.</p><div class="stack-actions"><button class="secondary-button" data-action="verify-license">Check license</button><button class="secondary-button" data-action="remove-license">Remove license</button></div>') : `<a class="primary-button" href="${CHECKOUT_URL}">Buy Pro</a><details><summary>Have a license?</summary><form id="license-form"><label for="license-token">Paste license token</label><input id="license-token" autocomplete="off" required><button class="secondary-button">Verify Pro license</button></form></details>`}<p class="legal-small">Checkout is hosted by Sociobot. <a href="/privacy" data-route="privacy">Privacy</a> · <a href="/terms" data-route="terms">Terms</a></p></section>
+      <section class="pro-panel"><p class="eyebrow">PRO FEATURES</p><h2>Set Receipt Pro</h2><p class="price"><strong>$9</strong> once</p><ul><li>Custom rest intervals</li><li>Private notes on receipts</li></ul>${isPro ? (demoMode ? '<p class="license-active">✓ Pro sample features are on in demo.</p>' : '<p class="license-active">✓ Pro is active in this browser.</p><div class="stack-actions"><button class="secondary-button" data-action="verify-license">Check license</button><button class="secondary-button" data-action="remove-license">Remove license</button></div>') : `${checkoutControl}<details><summary>Have a license?</summary><form id="license-form"><label for="license-token">Paste license token</label><input id="license-token" autocomplete="off" required><button class="secondary-button">Verify Pro license</button></form></details>`}<p class="legal-small">Checkout is hosted by Sociobot. <a href="/privacy" data-route="privacy">Privacy</a> · <a href="/terms" data-route="terms">Terms</a></p></section>
     </div></main>`;
 }
 
@@ -194,6 +200,21 @@ function render(): void {
   app.innerHTML = shell(content);
   makeHeadingFocusable();
   updateTimer();
+  if (view === 'settings' && !demoMode && !isPro && checkoutState === 'unknown') void checkCheckoutAvailability();
+}
+
+async function checkCheckoutAvailability(): Promise<void> {
+  checkoutState = 'checking';
+  try {
+    const response = await fetch('https://api.sociobot.in/api/v1/products', { signal: AbortSignal.timeout(8000) });
+    if (!response.ok) throw new Error('Checkout catalogue unavailable');
+    const body = await response.json() as { data?: Array<{ slug?: string; price_minor?: number; checkout_url?: string }> };
+    const product = body.data?.find((item) => item.slug === 'lift-receipt-log');
+    checkoutState = product?.price_minor === 900 && product.checkout_url === CHECKOUT_URL ? 'available' : 'unavailable';
+  } catch {
+    checkoutState = 'unavailable';
+  }
+  if (view === 'settings') render();
 }
 
 function formatClock(seconds: number): string {
@@ -439,6 +460,10 @@ app.addEventListener('click', async (event) => {
       isPro = await verifyLicense(true);
       if (isPro) showStatus('License is active.');
       else showError('License is no longer active.');
+      render();
+      break;
+    case 'retry-checkout':
+      checkoutState = 'unknown';
       render();
       break;
     case 'remove-license':

@@ -183,6 +183,8 @@ select, .inline-form input, .alias-form input, #license-token { width: 100%; min
 .pro-panel summary { min-height: 44px; cursor: pointer; font-weight: 800; }
 .pro-panel form { display: grid; gap: 8px; }
 .pro-panel #license-token { background: var(--surface); color: var(--ink); }
+.checkout-status { display: flex; flex-wrap: wrap; gap: 12px; }
+.checkout-status p { flex-basis: 100%; margin: 0; }
 .license-active { border: 2px solid #59c98d; padding: 12px; color: #95e9b8; font-weight: 800; }
 .legal-small { color: #d7d5c9; font-size: 13px; }
 .pro-panel a:not(.primary-button) { color: #b9c8ff; }

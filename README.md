@@ -55,7 +55,8 @@ are documented in `.factory/demo.md`.
 
 Workout data stays in this browser during ordinary logging. The app loads no
 analytics, ads, external fonts, or third-party scripts. The browser stores your
-license token and checks it with `api.sociobot.in` no more than once a day. See
+license token and checks it with `api.sociobot.in` no more than once a day.
+Opening Setup checks Sociobot checkout availability without sending workout data. See
 [`/privacy`](https://lift-receipt-log.sociobot.in/privacy) and
 [`/terms`](https://lift-receipt-log.sociobot.in/terms).
 

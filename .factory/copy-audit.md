@@ -25,9 +25,11 @@ banned marketing word. Storage is consistently described as browser-scoped.
 | It does not give training or injury advice. | 8 | `no-training-advice` |
 | Workout data stays in this browser until you export or share it. | 12 | `local-private`, `data-portability`, `receipt-share` |
 | Pro adds custom rest intervals and private notes on finished receipts. | 11 | `pro-features` |
+| Your workout log still works. | 5 | Checkout outage state |
+| Try checkout again later. | 4 | Checkout outage recovery |
 | Log sets, then finish the workout to save its receipt. | 10 | `keyboard-receipt` |
 | Workout data stays in this browser. | 6 | `local-private` |
-| License checks use Sociobot. | 4 | `pro-features` |
+| Pro checks use Sociobot. | 4 | `pro-price`, `pro-features` |
 | Built by Param Factory · v1.0.0 · Generated editorial image. | 8 | Attribution and provenance |
 
 ## Demo, legal, and recovery sentences
@@ -54,6 +56,8 @@ banned marketing word. Storage is consistently described as browser-scoped.
 | WORKOUT AND LICENSE DATA | Names the Privacy scope |
 | USE AND PRO LICENSE TERMS | Names the Terms scope |
 | Save rest time | Names the saved result |
+| See Pro purchase | Opens Setup; Setup checks availability before showing Buy Pro |
+| Checkout unavailable / Check again | Prevents a broken purchase action and provides recovery |
 | Try it with sample data | Opens `/?demo=1` in one click |
 | Reset demo / Start for real | Reset or discard isolated demo data |
 
@@ -78,6 +82,7 @@ banned marketing word. Storage is consistently described as browser-scoped.
 | Workout data stays in this browser during ordinary logging. | 9 | `local-private` |
 | The app loads no analytics, ads, external fonts, or third-party scripts. | 11 | `no-third-party-assets` |
 | The browser stores your license token and checks it with api.sociobot.in no more than once a day. | 17 | `pro-features` |
+| Opening Setup checks Sociobot checkout availability without sending workout data. | 10 | `pro-price` |
 
 ## Terminology
 

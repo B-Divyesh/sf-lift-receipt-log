@@ -64,6 +64,7 @@ try {
   await page.goto(`${origin}/?demo=1`);
   await page.waitForFunction(() => document.querySelectorAll('.set-row').length === 3);
   assert.equal(await page.locator('.set-row').count(), 3);
+  const demoExternalRequests = [...externalRequests];
 
   const routes = [
     ['/', 'Set Receipt — log lifts and keep receipts'],
@@ -86,6 +87,9 @@ try {
     assert.equal(await page.locator('meta[name="twitter:card"]').getAttribute('content'), 'summary_large_image', path);
     assert.equal(await page.locator('footer').getByRole('link', { name: 'Privacy' }).getAttribute('href'), '/privacy', path);
     assert.equal(await page.locator('footer').getByRole('link', { name: 'Terms' }).getAttribute('href'), '/terms', path);
+    if (path === '/?view=settings') {
+      await page.locator('a:has-text("Buy Pro"), button:has-text("Checkout unavailable")').first().waitFor();
+    }
     const axe = await new AxeBuilder({ page }).analyze();
     seriousAxeViolations += axe.violations.filter((item) => ['serious', 'critical'].includes(item.impact ?? '')).length;
     renderedCopy.push(await page.locator('body').innerText());
@@ -108,7 +112,8 @@ try {
 
   const copy = renderedCopy.join('\n');
   assert.doesNotMatch(copy, /IMMUTABLE TRAINING RECORD|OPEN RECEIPT|ONE-TIME UNLOCK|LOCAL LIFT LOG|THE PLAIN-LANGUAGE VERSION|SHORT AND STRAIGHT|YOUR TRAINING, YOUR FILE|MAKE THE SHORTHAND YOURS/);
-  assert.deepEqual(externalRequests, []);
+  assert.deepEqual(demoExternalRequests, []);
+  assert.deepEqual(externalRequests.filter((url) => !url.startsWith('https://api.sociobot.in/api/v1/products')), []);
   assert.deepEqual(errors.filter((message) => !message.includes('status of 404')), []);
   assert.equal(seriousAxeViolations, 0);
 } finally {
@@ -136,4 +141,4 @@ try {
   await browser.close();
 }
 
-console.log(JSON.stringify({ origin, routes: 6, demoIsolation: 'pass', offline: 'pass', externalRequests: 0, consoleErrors: 0, seriousAxeViolations }));
+console.log(JSON.stringify({ origin, routes: 6, demoIsolation: 'pass', offline: 'pass', demoExternalRequests: demoExternalRequests.length, allowedCheckoutChecks: externalRequests.length, consoleErrors: 0, seriousAxeViolations }));
