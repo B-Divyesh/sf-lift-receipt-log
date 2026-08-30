@@ -233,6 +233,21 @@ test('@claim:pro-price shows the one-time price and Sociobot checkout', async ({
   await page.getByRole('button', { name: 'Setup' }).click();
   await expect(page.locator('.price')).toHaveText('$9 once');
   await expect(page.getByRole('link', { name: 'Buy Pro' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/lift-receipt-log/checkout');
+
+  const catalogue = await page.request.get('https://api.sociobot.in/api/v1/products');
+  expect(catalogue.ok()).toBe(true);
+  const body = await catalogue.json() as { data: Array<{ slug: string; price_minor: number; checkout_url: string }> };
+  expect(body.data.find((product) => product.slug === 'lift-receipt-log')).toMatchObject({
+    slug: 'lift-receipt-log',
+    price_minor: 900,
+    checkout_url: 'https://api.sociobot.in/api/v1/products/lift-receipt-log/checkout',
+  });
+
+  const checkout = await page.request.get('https://api.sociobot.in/api/v1/products/lift-receipt-log/checkout', { maxRedirects: 0 });
+  expect(checkout.status()).toBe(303);
+  const location = checkout.headers().location;
+  expect(location).toBeTruthy();
+  expect(new URL(location!).hostname).toMatch(/(^|\.)dodopayments\.com$/);
 });
 
 test('@claim:pro-features verifies once, enables custom rest, and persists private notes', async ({ page }) => {
@@ -297,10 +312,21 @@ test('@claim:print-receipt exposes a print-ready completed receipt', async ({ pa
   await expect(page.locator('.receipt-actions')).toBeHidden();
 });
 
+test('serves a styled 404 response with a working route back to the logger', async ({ page }) => {
+  const response = await page.goto('/not-a-real-route');
+  expect(response?.status()).toBe(404);
+  await expect(page).toHaveTitle('Page not found — Set Receipt');
+  await expect(page.getByRole('heading', { name: 'That page is not in your log.' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open the logger' })).toBeVisible();
+  await page.getByRole('link', { name: 'Open the logger' }).click();
+  await expect(page).toHaveURL('http://127.0.0.1:4173/');
+  await expect(page.getByRole('heading', { name: 'Log the set. Keep the proof.' })).toBeVisible();
+});
+
 test('has no serious accessibility violations on core and legal screens', async ({ page }) => {
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
-    for (const path of ['/', '/demo', '/privacy', '/terms']) {
+    for (const path of ['/', '/demo', '/privacy', '/terms', '/not-a-real-route']) {
       await page.goto(path);
       await expect(page.locator('h1')).toHaveCount(1);
       const results = await new AxeBuilder({ page }).analyze();

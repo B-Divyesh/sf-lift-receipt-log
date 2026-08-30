@@ -37,6 +37,15 @@ Audited 30 August 2026. Counts treat contractions and displayed numbers as one w
 | Start for real | 3 | Pass |
 | Demo reset to sample data. | 5 | Pass |
 
+## Missing page
+
+| Copy | Words | Result |
+| --- | ---: | --- |
+| That page is not in your log. | 7 | Pass |
+| Use the logger to record a set, or open the sample workout. | 12 | Pass |
+| Open the logger | 3 | Pass |
+| Try sample data | 3 | Pass |
+
 ## Terminology
 
 | Concept | Term used |

@@ -67,6 +67,13 @@ function renderLegal(kind: 'privacy' | 'terms'): void {
   app.innerHTML = shell(kind === 'privacy' ? privacy : terms, 'legal');
 }
 
+function renderNotFound(): void {
+  app.innerHTML = shell(`<main id="main" class="legal not-found" tabindex="-1"><p class="eyebrow">404 / PAGE NOT FOUND</p>
+    <h1>That page is not in your log.</h1>
+    <p>Use the logger to record a set, or open the sample workout.</p>
+    <p class="not-found-actions"><a class="primary-button" href="/" data-route="home">Open the logger</a><a class="secondary-button" href="/demo">Try sample data</a></p></main>`, 'legal');
+}
+
 function setRows(workout: Workout): string {
   if (!workout.sets.length) return `<div class="sets-empty"><p>No sets yet. Your first line becomes the first row.</p></div>`;
   return `<ol class="set-list">${workout.sets.slice().reverse().map((set) => `<li class="set-row">
@@ -134,8 +141,9 @@ function settingsView(): string {
 
 function render(): void {
   const path = location.pathname;
-  const title = path === '/privacy' ? 'Privacy — Set Receipt' : path === '/terms' ? 'Terms — Set Receipt' : demoMode ? 'Demo — Set Receipt' : 'Set Receipt — fast, offline lift log';
-  const description = path === '/privacy' ? 'How Set Receipt stores workout and license data.' : path === '/terms' ? 'Terms for using Set Receipt and its one-time Pro license.' : demoMode ? 'Try Set Receipt with an isolated sample workout log.' : 'Log a lifting set in one line and keep an offline workout receipt.';
+  const knownPath = path === '/' || path === '/demo' || path === '/privacy' || path === '/terms';
+  const title = !knownPath ? 'Page not found — Set Receipt' : path === '/privacy' ? 'Privacy — Set Receipt' : path === '/terms' ? 'Terms — Set Receipt' : demoMode ? 'Demo — Set Receipt' : 'Set Receipt — fast, offline lift log';
+  const description = !knownPath ? 'The requested Set Receipt page was not found.' : path === '/privacy' ? 'How Set Receipt stores workout and license data.' : path === '/terms' ? 'Terms for using Set Receipt and its one-time Pro license.' : demoMode ? 'Try Set Receipt with an isolated sample workout log.' : 'Log a lifting set in one line and keep an offline workout receipt.';
   document.title = title;
   document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', description);
   document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute('content', title);
@@ -144,6 +152,7 @@ function render(): void {
   document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', description);
   document.querySelector<HTMLLinkElement>('#canonical-url')?.setAttribute('href', `https://lift-receipt-log.sociobot.in${path}`);
   document.querySelector<HTMLMetaElement>('meta[property="og:url"]')?.setAttribute('content', `https://lift-receipt-log.sociobot.in${path}`);
+  if (!knownPath) return renderNotFound();
   if (path === '/privacy') return renderLegal('privacy');
   if (path === '/terms') return renderLegal('terms');
   const content = view === 'log' ? logView() : view === 'history' ? historyView() : settingsView();

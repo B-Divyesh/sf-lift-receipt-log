@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/build-sw.mjs",
-    "test": "vitest run && playwright test",
+    "test": "vitest run && npm run test:static && playwright test",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
+    "test:static": "node scripts/verify-static-routes.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
