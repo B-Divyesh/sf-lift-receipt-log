@@ -1,11 +1,12 @@
 # Set Receipt
 
-Set Receipt is an ultra-fast, local-first lift logger for regular lifters who
-want to record a set as quickly as writing `225x5` in a notebook. It turns the
-finished workout into a compact, printable receipt with set count, volume,
-duration, and load PRs.
+Set Receipt is a keyboard-first, local lift logger for regular lifters. Enter a
+set as `225x5`, then keep the finished workout as a compact receipt.
 
 Live: <https://lift-receipt-log.sociobot.in>
+
+Demo: <https://lift-receipt-log.sociobot.in/demo>. It opens realistic sample
+workouts in a separate browser-storage namespace and never changes your real log.
 
 ## What it does
 
@@ -52,8 +53,12 @@ npm test
 ```
 
 The suite covers parsing, receipt math, backup validation, keyboard entry,
-IndexedDB persistence, aliases, mobile overflow, axe accessibility scans, and a
-real offline reload followed by an offline set entry.
+IndexedDB persistence, aliases, exact recovery regressions, touch geometry,
+demo isolation, privacy request capture, axe scans, and offline reloads.
+
+Machine-readable product claims and their exact test commands are in
+`.factory/claims.json`. Demo data and reset behavior are documented in
+`.factory/demo.md`.
 
 ## Privacy and data
 

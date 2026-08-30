@@ -1,9 +1,9 @@
 import './styles.css';
-import { loadData, saveData, validateImport } from './db';
+import { loadData, saveData, validateImport, type StorageNamespace } from './db';
 import { canonicalExercise, parseSet } from './parser';
-import { CHECKOUT_URL, cachedUnlock, captureLicense, storeLicense, verifyLicense } from './license';
+import { CHECKOUT_URL, cachedUnlock, captureLicense, removeLicense, storeLicense, verifyLicense } from './license';
 import { csvText, formatDuration, receiptText, workoutDuration, workoutVolume } from './receipt';
-import { DEFAULT_ALIASES, DEFAULT_DATA, type Alias, type AppData, type LiftSet, type Workout } from './types';
+import { DEFAULT_ALIASES, DEFAULT_DATA, DEMO_DATA, type Alias, type AppData, type LiftSet, type Workout } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let data: AppData;
@@ -20,6 +20,8 @@ let undoTimeout: number | undefined;
 let serviceWorkerRegistration: ServiceWorkerRegistration | undefined;
 let updateAvailable = false;
 let refreshAfterUpdate = false;
+const demoMode = location.pathname === '/demo' || new URLSearchParams(location.search).get('demo') === '1';
+const storageNamespace: StorageNamespace = demoMode ? 'demo' : 'real';
 
 const escapeHtml = (value: unknown) => String(value)
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -32,7 +34,7 @@ const showError = (message: string) => { status = ''; error = message; };
 
 function shell(content: string, page: 'app' | 'legal' = 'app'): string {
   return `<header class="site-header">
-    <a class="wordmark" href="/" data-route="home" aria-label="SR — Set Receipt home"><span aria-hidden="true">SR</span> Set Receipt</a>
+    <a class="wordmark" href="${demoMode ? '/demo' : '/'}" data-route="home" aria-label="SR — Set Receipt home"><span aria-hidden="true">SR</span> Set Receipt</a>
     ${page === 'app' ? `<nav aria-label="Primary">
       <button class="nav-button ${view === 'log' ? 'active' : ''}" data-view="log">Log</button>
       <button class="nav-button ${view === 'history' ? 'active' : ''}" data-view="history">Receipts</button>
@@ -40,8 +42,9 @@ function shell(content: string, page: 'app' | 'legal' = 'app'): string {
     </nav>` : '<a class="back-link" href="/" data-route="home">← Back to logger</a>'}
   </header>
   <div class="network-status" id="network-status" role="status">${navigator.onLine ? 'Saved on this device' : 'Offline · logging still works'}</div>
+  ${demoMode ? '<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved to your log</strong><div><button data-action="reset-demo">Reset demo</button><a href="/">Start for real</a></div></aside>' : ''}
   ${content}
-  <footer><p>Private by default. No account, feed, or tracking.</p><nav aria-label="Legal"><a href="/privacy" data-route="privacy">Privacy</a><a href="/terms" data-route="terms">Terms</a></nav><p class="disclosure">Editorial image generated for Set Receipt.</p></footer>
+  <footer><p>Private by default. No account, feed, or tracking.</p><nav aria-label="Legal"><a href="/privacy" data-route="privacy">Privacy</a><a href="/terms" data-route="terms">Terms</a></nav><p class="disclosure">Built by Param Factory · v1.0.0 · Generated editorial image.</p></footer>
   <div class="toast ${status || error ? 'show' : ''}" role="status" aria-live="polite">${escapeHtml(error || status)}${undoSet ? ' <button data-action="undo-delete">Undo</button>' : ''}</div>
   <div class="update-toast" id="update-toast" role="status"${updateAvailable ? '' : ' hidden'}>Update ready. <button data-action="refresh-app">Refresh</button></div>`;
 }
@@ -54,7 +57,7 @@ function renderLegal(kind: 'privacy' | 'terms'): void {
   const privacy = `<main id="main" class="legal"><p class="eyebrow">THE PLAIN-LANGUAGE VERSION</p><h1>Privacy</h1>
     <p><strong>Your workout log stays on this device.</strong> Set Receipt stores workouts, aliases, and preferences in your browser’s IndexedDB. We do not operate an account system, analytics tracker, or advertising profile.</p>
     <h2>What leaves your device</h2><p>Nothing during ordinary logging. If you buy or verify a Pro license, the license token is sent to Sociobot’s billing API. Sociobot and Dodo are the merchant of record and process checkout details; payment card data never passes through this app.</p>
-    <h2>Your controls</h2><p>You can export a complete JSON backup or CSV at any time, import your backup on another device, and erase all local data from Setup. Shared or printed receipts leave the app only when you choose.</p>
+    <h2>Your controls</h2><p>You can export a complete JSON backup or CSV, import a backup, and erase local workout data from Setup. You can also remove a saved license there. Shared or printed receipts leave the app only when you choose.</p>
     <h2>Contact</h2><p>Questions can be sent through <a href="https://sociobot.in">sociobot.in</a>. Effective 27 August 2026.</p></main>`;
   const terms = `<main id="main" class="legal"><p class="eyebrow">SHORT AND STRAIGHT</p><h1>Terms</h1>
     <p>Set Receipt is a personal record-keeping utility, not training, medical, or injury advice. You are responsible for your exercise choices and for keeping backups of data that matters to you.</p>
@@ -82,13 +85,15 @@ function logView(): string {
     <section class="log-main" aria-labelledby="page-title">
       <p class="eyebrow">LOCAL LIFT LOG / ${navigator.onLine ? 'READY' : 'OFFLINE'}</p>
       <h1 id="page-title">Log the set.<br><span>Keep the proof.</span></h1>
-      <p class="lede">Type it like a notebook. Enter logs it.</p>
+      <p class="lede">For lifters who want to log a set as fast as a notebook.</p>
+      <ul class="hero-facts" aria-label="Product facts"><li>Works offline after your first visit.</li><li>Workout data stays on this device.</li><li>Free logger. Pro extras cost $9 once.</li></ul>
       <form id="set-form" class="entry-docket" novalidate>
         <div class="entry-field exercise-field"><label for="exercise">Exercise</label><input id="exercise" name="exercise" list="exercise-list" autocomplete="off" enterkeyhint="next" placeholder="Squat or sq" required><datalist id="exercise-list">${exerciseNames.map((name) => `<option value="${escapeHtml(name)}"></option>`).join('')}${data.aliases.map((item) => `<option value="${escapeHtml(item.alias)}">${escapeHtml(item.exercise)}</option>`).join('')}</datalist></div>
         <div class="entry-field set-field"><label for="set-expression">Weight × reps</label><input id="set-expression" name="set" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="225x5" aria-describedby="entry-help entry-error" required></div>
         <button class="primary-button" type="submit">Log set <span aria-hidden="true">↵</span></button>
         <p id="entry-help" class="form-help">Try 225x5, 100x8kg, or 135 × 10.</p><p id="entry-error" class="form-error" aria-live="assertive">${escapeHtml(error)}</p>
       </form>
+      ${demoMode ? '' : '<div class="demo-entry"><a class="secondary-button" href="/demo">Try it with sample data</a><span>Loads a separate sample log.</span></div>'}
       ${workout ? `<section class="active-sheet" aria-labelledby="active-title"><div class="sheet-heading"><div><p class="eyebrow">OPEN RECEIPT · ${dateLabel(workout.startedAt)}</p><h2 id="active-title">Today’s sets</h2></div><span class="set-count">${workout.sets.length} SET${workout.sets.length === 1 ? '' : 'S'}</span></div>${setRows(workout)}<div class="sheet-actions"><button class="secondary-button" data-action="finish-workout" ${workout.sets.length ? '' : 'disabled'}>Finish workout</button><span>${workoutVolume(workout).toLocaleString()} load volume</span></div></section>` : ''}
     </section>
     <aside class="utility-rail" aria-label="Workout utilities">
@@ -123,12 +128,22 @@ function settingsView(): string {
     <div class="settings-grid"><section><h2>Logging defaults</h2><fieldset><legend>Default unit</legend><label><input type="radio" name="unit" value="lb" ${data.settings.unit === 'lb' ? 'checked' : ''}> Pounds (lb)</label><label><input type="radio" name="unit" value="kg" ${data.settings.unit === 'kg' ? 'checked' : ''}> Kilograms (kg)</label></fieldset><label for="rest-select">Rest clock</label><select id="rest-select" data-setting="rest"><option value="60" ${data.settings.restSeconds === 60 ? 'selected' : ''}>1 minute</option><option value="90" ${data.settings.restSeconds === 90 ? 'selected' : ''}>1½ minutes</option><option value="120" ${data.settings.restSeconds === 120 ? 'selected' : ''}>2 minutes</option><option value="180" ${data.settings.restSeconds === 180 ? 'selected' : ''}>3 minutes</option>${!['60','90','120','180'].includes(String(data.settings.restSeconds)) ? `<option value="${data.settings.restSeconds}" selected>${data.settings.restSeconds} seconds</option>` : ''}</select>${isPro ? `<form id="custom-rest-form" class="inline-form"><label for="custom-rest">Custom seconds</label><input id="custom-rest" type="number" min="15" max="900" value="${data.settings.restSeconds}"><button>Set</button></form>` : '<p class="form-help">Pro adds any custom rest interval.</p>'}</section>
       <section><div class="section-title"><div><h2>Exercise aliases</h2><p>Type the short code in the exercise box.</p></div></div><form id="alias-form" class="alias-form"><label for="alias-code">Short code<input id="alias-code" maxlength="12" placeholder="rdl" required></label><label for="alias-exercise">Exercise<input id="alias-exercise" maxlength="48" placeholder="Romanian deadlift" required></label><button class="secondary-button">Add alias</button></form><ul class="alias-list">${data.aliases.map((item) => `<li><code>${escapeHtml(item.alias)}</code><span>→ ${escapeHtml(item.exercise)}</span><button data-delete-alias="${escapeHtml(item.id)}" aria-label="Delete ${escapeHtml(item.alias)} alias" ${DEFAULT_ALIASES.some((base) => base.id === item.id) ? 'title="Default alias"' : ''}>×</button></li>`).join('')}</ul></section>
       <section><h2>Your data</h2><p>Back up or move every workout. Export is always free.</p><div class="stack-actions"><button class="secondary-button" data-action="export-json">Export JSON</button><button class="secondary-button" data-action="export-csv">Export CSV</button><label class="file-button">Import JSON<input id="import-file" type="file" accept="application/json,.json"></label><button class="danger-button" data-action="erase-data">Erase all local data</button></div><p class="form-help">Import replaces the log on this device after confirmation.</p></section>
-      <section class="pro-panel"><p class="eyebrow">ONE-TIME UNLOCK</p><h2>Set Receipt Pro</h2><p class="price"><strong>$9</strong> once</p><ul><li>Custom rest intervals</li><li>Private notes on receipts</li><li>Supports a focused, ad-free tool</li></ul>${isPro ? '<p class="license-active">✓ Pro is active on this device.</p><button class="secondary-button" data-action="verify-license">Check license</button>' : `<a class="primary-button" href="${CHECKOUT_URL}">Buy Pro</a><details><summary>Have a license?</summary><form id="license-form"><label for="license-token">Paste license token</label><input id="license-token" autocomplete="off" required><button class="secondary-button">Verify and unlock</button></form></details>`}<p class="legal-small">Checkout is hosted by Sociobot/Dodo, the merchant of record. Refunds are handled there and revoke the license. <a href="/privacy" data-route="privacy">Privacy</a> · <a href="/terms" data-route="terms">Terms</a></p></section>
+      <section class="pro-panel"><p class="eyebrow">ONE-TIME UNLOCK</p><h2>Set Receipt Pro</h2><p class="price"><strong>$9</strong> once</p><ul><li>Custom rest intervals</li><li>Private notes on receipts</li><li>Supports a focused, ad-free tool</li></ul>${isPro ? (demoMode ? '<p class="license-active">✓ Pro sample features are on in demo.</p>' : '<p class="license-active">✓ Pro is active on this device.</p><div class="stack-actions"><button class="secondary-button" data-action="verify-license">Check license</button><button class="secondary-button" data-action="remove-license">Remove license</button></div>') : `<a class="primary-button" href="${CHECKOUT_URL}">Buy Pro</a><details><summary>Have a license?</summary><form id="license-form"><label for="license-token">Paste license token</label><input id="license-token" autocomplete="off" required><button class="secondary-button">Verify and unlock</button></form></details>`}<p class="legal-small">Checkout is hosted by Sociobot/Dodo, the merchant of record. Refunds are handled there and revoke the license. <a href="/privacy" data-route="privacy">Privacy</a> · <a href="/terms" data-route="terms">Terms</a></p></section>
     </div></main>`;
 }
 
 function render(): void {
   const path = location.pathname;
+  const title = path === '/privacy' ? 'Privacy — Set Receipt' : path === '/terms' ? 'Terms — Set Receipt' : demoMode ? 'Demo — Set Receipt' : 'Set Receipt — fast, offline lift log';
+  const description = path === '/privacy' ? 'How Set Receipt stores workout and license data.' : path === '/terms' ? 'Terms for using Set Receipt and its one-time Pro license.' : demoMode ? 'Try Set Receipt with an isolated sample workout log.' : 'Log a lifting set in one line and keep an offline workout receipt.';
+  document.title = title;
+  document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', description);
+  document.querySelector<HTMLMetaElement>('meta[property="og:title"]')?.setAttribute('content', title);
+  document.querySelector<HTMLMetaElement>('meta[property="og:description"]')?.setAttribute('content', description);
+  document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]')?.setAttribute('content', title);
+  document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', description);
+  document.querySelector<HTMLLinkElement>('#canonical-url')?.setAttribute('href', `https://lift-receipt-log.sociobot.in${path}`);
+  document.querySelector<HTMLMetaElement>('meta[property="og:url"]')?.setAttribute('content', `https://lift-receipt-log.sociobot.in${path}`);
   if (path === '/privacy') return renderLegal('privacy');
   if (path === '/terms') return renderLegal('terms');
   const content = view === 'log' ? logView() : view === 'history' ? historyView() : settingsView();
@@ -161,7 +176,7 @@ function startTimer(): void {
 
 async function persist(message = ''): Promise<void> {
   try {
-    await saveData(data);
+    await saveData(data, storageNamespace);
     storageFailed = false;
     if (message) showStatus(message);
   } catch {
@@ -230,7 +245,7 @@ async function finishWorkout(): Promise<void> {
 
 function navigate(path: string): void {
   history.pushState({}, '', path);
-  if (path === '/') view = 'log';
+  if (path === '/' || path === '/demo') view = 'log';
   render();
   document.querySelector('h1')?.focus({ preventScroll: true });
   scrollTo(0, 0);
@@ -286,7 +301,12 @@ app.addEventListener('click', async (event) => {
   const target = (event.target as HTMLElement).closest<HTMLElement>('button, a');
   if (!target) return;
   const route = target.dataset.route;
-  if (route) { event.preventDefault(); navigate(route === 'home' ? '/' : `/${route}`); return; }
+  if (route) {
+    event.preventDefault();
+    const routePath = route === 'home' ? (demoMode ? '/demo' : '/') : `/${route}${demoMode ? '?demo=1' : ''}`;
+    navigate(routePath);
+    return;
+  }
   if (target.dataset.view) { view = target.dataset.view as typeof view; selectedReceipt = null; render(); return; }
   if (target.dataset.receipt) { selectedReceipt = target.dataset.receipt; render(); return; }
   if (target.dataset.deleteSet) {
@@ -331,10 +351,28 @@ app.addEventListener('click', async (event) => {
         render();
       }
       break;
+    case 'reset-demo':
+      if (!demoMode) break;
+      data = structuredClone(DEMO_DATA);
+      selectedReceipt = null;
+      view = 'log';
+      restEndsAt = 0;
+      undoSet = null;
+      window.clearInterval(restTimer);
+      window.clearTimeout(undoTimeout);
+      await persist('Demo reset to sample data.');
+      render();
+      break;
     case 'verify-license':
       isPro = await verifyLicense(true);
       if (isPro) showStatus('License is active.');
       else showError('License is no longer active.');
+      render();
+      break;
+    case 'remove-license':
+      removeLicense();
+      isPro = false;
+      showStatus('License removed from this device.');
       render();
       break;
     case 'refresh-app': {
@@ -377,11 +415,17 @@ async function registerServiceWorker(): Promise<void> {
 
 async function init(): Promise<void> {
   renderLoading();
-  captureLicense();
-  isPro = cachedUnlock();
-  try { data = await loadData(); } catch { data = structuredClone(DEFAULT_DATA); storageFailed = true; showError('Local storage is unavailable. Logging will last only for this tab.'); }
+  if (demoMode) isPro = true;
+  else { captureLicense(); isPro = cachedUnlock(); }
+  try {
+    data = await loadData(storageNamespace);
+    if (demoMode && data.workouts.length === 0) {
+      data = structuredClone(DEMO_DATA);
+      await saveData(data, storageNamespace);
+    }
+  } catch { data = structuredClone(demoMode ? DEMO_DATA : DEFAULT_DATA); storageFailed = true; showError('Local storage is unavailable. Logging will last only for this tab.'); }
   render();
-  verifyLicense().then((valid) => { if (valid !== isPro) { isPro = valid; if (!valid) showError('License is no longer active.'); render(); } });
+  if (!demoMode) verifyLicense().then((valid) => { if (valid !== isPro) { isPro = valid; if (!valid) showError('License is no longer active.'); render(); } });
   registerServiceWorker().catch(() => { /* Logging still works without installation. */ });
 }
 

@@ -38,6 +38,11 @@ a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px
 .nav-button.active { background: var(--ink); color: var(--surface); border-color: var(--ink); }
 .back-link { font-weight: 800; }
 .network-status { border-bottom: var(--rule); padding: 5px clamp(16px, 4vw, 56px); background: var(--plate); color: #fff; font: 700 12px ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase; }
+.demo-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: var(--rule); background: #fff5cc; color: #171814; padding: 8px clamp(16px, 4vw, 56px); }
+.demo-banner strong { font: 800 13px/1.4 ui-monospace, monospace; }
+.demo-banner div { display: flex; align-items: center; gap: 12px; }
+.demo-banner button { border: 2px solid #171814; background: transparent; color: #171814; padding: 8px 12px; font-weight: 800; }
+.demo-banner a { color: #10286b; font-weight: 800; }
 
 main { min-height: 65vh; }
 .log-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .65fr); gap: clamp(24px, 5vw, 72px); max-width: 1480px; margin: 0 auto; padding: clamp(32px, 6vw, 80px) clamp(16px, 4vw, 56px) 72px; }
@@ -48,6 +53,10 @@ h1 { max-width: 920px; margin: 0; font: 900 clamp(2.6rem, 7vw, 6rem)/.88 "Arial 
 h1 span { color: var(--plate); }
 h2 { margin: 0; font: 900 clamp(1.35rem, 3vw, 2rem)/1 "Arial Black", Arial, sans-serif; letter-spacing: -.04em; text-transform: uppercase; }
 .lede { max-width: 60ch; margin: 20px 0 28px; color: var(--muted); font-size: 18px; }
+.demo-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 20px 0 28px; }
+.demo-entry span { color: var(--muted); font-size: 14px; }
+.hero-facts { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: -12px 0 28px; padding: 0; list-style: none; color: var(--muted); font: 700 13px/1.4 ui-monospace, monospace; }
+.hero-facts li::before { content: '✓ '; color: var(--success); font-weight: 900; }
 
 .entry-docket { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(150px, .8fr) auto; background: var(--surface); border: 3px solid var(--ink); box-shadow: 8px 8px 0 var(--ink); }
 .entry-field { display: flex; flex-direction: column; min-width: 0; border-right: var(--rule); }
@@ -178,7 +187,7 @@ footer nav { display: flex; gap: 18px; }
 .toast button, .update-toast button { min-width: 44px; min-height: 44px; border: 1px solid var(--surface); background: transparent; color: var(--surface); margin-left: 10px; font-weight: 800; }
 .update-toast:not([hidden]) { display: block; visibility: visible; transform: none; bottom: 88px; }
 
-@keyframes print-row { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes print-row { from { transform: translateY(-6px); } }
 
 @media (max-width: 860px) {
   .log-layout { grid-template-columns: 1fr; }
@@ -196,6 +205,7 @@ footer nav { display: flex; gap: 18px; }
   .site-header nav { gap: 8px; }
   .nav-button { min-width: 0; padding-inline: 9px; font-size: 14px; }
   .network-status { padding-inline: 12px; }
+  .demo-banner { align-items: flex-start; flex-direction: column; padding-inline: 12px; }
   .log-layout { padding: 30px 12px 64px; gap: 24px; }
   h1 { font-size: clamp(2.75rem, 14vw, 4.2rem); }
   .entry-docket { grid-template-columns: 1fr 1fr; box-shadow: 5px 5px 0 var(--ink); }

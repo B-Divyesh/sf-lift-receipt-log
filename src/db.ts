@@ -3,6 +3,7 @@ import { DEFAULT_DATA, type AppData } from './types';
 const DB_NAME = 'set-receipt';
 const STORE = 'documents';
 const KEY = 'app-data';
+export type StorageNamespace = 'real' | 'demo';
 
 function request<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -11,17 +12,17 @@ function request<T>(req: IDBRequest<T>): Promise<T> {
   });
 }
 
-async function openDb(): Promise<IDBDatabase> {
+async function openDb(namespace: StorageNamespace): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
+    const req = indexedDB.open(namespace === 'demo' ? `${DB_NAME}-demo` : DB_NAME, 1);
     req.onupgradeneeded = () => req.result.createObjectStore(STORE);
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error('Could not open local storage'));
   });
 }
 
-export async function loadData(): Promise<AppData> {
-  const db = await openDb();
+export async function loadData(namespace: StorageNamespace = 'real'): Promise<AppData> {
+  const db = await openDb(namespace);
   const tx = db.transaction(STORE, 'readonly');
   const saved = await request(tx.objectStore(STORE).get(KEY)) as AppData | undefined;
   db.close();
@@ -33,8 +34,8 @@ export async function loadData(): Promise<AppData> {
   };
 }
 
-export async function saveData(data: AppData): Promise<void> {
-  const db = await openDb();
+export async function saveData(data: AppData, namespace: StorageNamespace = 'real'): Promise<void> {
+  const db = await openDb(namespace);
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
     tx.objectStore(STORE).put(data, KEY);

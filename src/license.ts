@@ -21,6 +21,11 @@ export function storeLicense(token: string): void {
   localStorage.setItem(VERDICT_KEY, JSON.stringify({ valid: true, checkedAt: 0 }));
 }
 
+export function removeLicense(): void {
+  localStorage.removeItem(KEY);
+  localStorage.removeItem(VERDICT_KEY);
+}
+
 export function cachedUnlock(): boolean {
   if (!localStorage.getItem(KEY)) return false;
   try { return JSON.parse(localStorage.getItem(VERDICT_KEY) ?? '').valid === true; } catch { return true; }

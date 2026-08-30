@@ -57,7 +57,8 @@ orange black, no people, no readable text, no numbers, no watermark, no logos,
 no gradients, no glossy 3D app icon.”
 
 Generated with the factory `factory-image` deployment on 2026-08-27. The final
-PNG source and prompt sidecar live in `assets/src/`; the shipped WebP is an
-optimized derivative. Generated imagery is original to this product under the
-factory’s output terms. Each candidate is visually reviewed for stray text,
-brands, malformed plate geometry, seams, and palette consistency before use.
+PNG source and prompt sidecar live in `assets/src/`; the shipped square WebP and
+1200 × 630 social crop are optimized derivatives. Generated imagery is original
+to this product under the factory’s output terms. Each candidate is visually
+reviewed for stray text, brands, malformed plate geometry, seams, and palette
+consistency before use.
