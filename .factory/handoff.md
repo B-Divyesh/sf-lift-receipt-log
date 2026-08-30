@@ -1,84 +1,45 @@
-# Set Receipt — polish round 2 handoff
+# Set Receipt — independent verification 7 handoff
 
-## Status
+## Status: FAIL
 
-Complete. Every finding in `review-1.md` and `review-2.md` is resolved. The
-released PWA remains a local-first, static Vite + TypeScript application with
-the original neo-brutalist training-docket visual system.
+Candidate `664641f6bef5592f1416a4dbe3ad9acd06d510fb` at
+<https://lift-receipt-log.sociobot.in> is **not accepted**. The live deployment
+matches the candidate and the product works end to end, but the required exact
+`npm test` command fails consistently and the mobile 404 page has undersized
+navigation targets. No product code was modified during verification.
 
-Production: <https://lift-receipt-log.sociobot.in>
+Full evidence: [`.factory/verification-7.md`](verification-7.md).
 
-One-click demo: <https://lift-receipt-log.sociobot.in/?demo=1>
+## What passed
 
-## What changed
+- All 14 commands in `.factory/claims.json` passed separately in desktop and
+  390 px mobile Chromium (28 claim executions).
+- The cold first screen states what the product does, who it serves, and offers
+  a visible one-click sample demo with its result explained.
+- Unit tests and static checks pass; `npm run build` passes TypeScript and emits
+  `dist/`.
+- Live normal, boundary, invalid/recovery, receipt persistence, demo isolation,
+  request privacy, keyboard, focus, dark/light Axe, reduced motion, offline
+  reload, service-worker update, headers, caching, and billing-rate-limit checks
+  otherwise passed.
+- The local and live HTML, manifest, service worker, JS, CSS, and hero hashes
+  match.
+- Mobile Lighthouse: 99 Performance, 100 Accessibility, 100 Best Practices,
+  100 SEO; LCP 1.1 s, CLS 0, TBT 150 ms.
 
-- Replaced the regressed immutable-receipt claim and every vague or conflicting
-  label identified in review 2 with literal workout, receipt, privacy, and Pro
-  terminology.
-- Standardized the data boundary as “this browser” in the app, legal copy,
-  README, 404, and catalog description.
-- Made `/?demo=1` the visible one-click demo path while retaining the isolated
-  `set-receipt-demo` database, persistent banner, Reset demo, destructive exit,
-  immediate sample receipt, and offline operation.
-- Removed the untested installation promise and added the listed
-  `no-training-advice` claim with a real route-level test.
-- Expanded static regressions for metadata, routes, forbidden old wording, and
-  exact one-test-per-claim registration.
-- Expanded browser checks across root, demo, Receipts, Setup, demo Setup,
-  Privacy, Terms, and 404 in light and dark modes. This exposed and fixed Pro
-  panel and custom-rest button contrast in dark mode.
-- Added a fail-soft checkout availability check. Setup shows Buy Pro only after
-  validating the registered 900-cent product; service outages show a disabled
-  checkout state with a retry action while the free logger keeps working.
-- Scoped checkout status updates to their own live region so an asynchronous
-  response cannot erase alias or settings input.
-- Added `npm run verify:live` for repeatable cold production checks covering
-  first-screen geometry, demo isolation, focus, routing, metadata, privacy,
-  offline use, console errors, and serious/critical Axe findings.
-- Updated `.factory/copy-audit.md`, `.factory/demo.md`,
-  `.factory/catalog-description.txt`, and the exhaustive finding map in
-  `.factory/polish-2.md`.
+## Blocking defects
 
-## Verification evidence
+1. **High:** exact `npm test` ends with 49 passed, 3 skipped, 2 failed. Both
+   desktop and mobile accessibility-matrix cases exceed the default 30-second
+   timeout at `tests/e2e/app.spec.ts:464`. The isolated default-timeout rerun
+   also fails. The unchanged test passes 2/2 with `--timeout=60000` in 46.5 s,
+   and independent live Axe scans find no serious/critical violations.
+2. **Medium:** at 390 px, the live 404 page's Log, Receipts, Setup, Privacy, and
+   Terms links are only 17–19.5 px tall (and several are below 44 px wide).
+   This violates the required 44 by 44 touch-target baseline. The current
+   target-size regression omits the 404 route.
 
-- Clean clone of implementation commit `a03863b568c6efca0a000453b655ecca7a8bf9b4`:
-  each of the 14 exact commands in `.factory/claims.json` passed separately in
-  desktop Chromium and the 390 × 844 mobile project (28 executions).
-- Clean-clone `npm test`: 7 unit tests passed; static route/copy/claim checks
-  passed; 51 Playwright tests passed with 3 expected project-specific skips.
-- Final local `npm test`: the expanded accessibility matrix passed after the
-  contrast repair.
-- Final `npm run build`: `dist/` produced; initial JS 35.05 kB raw / 12.03 kB
-  gzip and CSS 18.80 kB raw / 4.88 kB gzip.
-- Local URL verifier: HTTP 200, no console errors, `lang=en`, one H1, one main,
-  no missing image alt, and no unlabeled buttons.
-- Mobile Lighthouse on `http://127.0.0.1:4173/?demo=1`: Performance 100,
-  Accessibility 100, Best Practices 100, SEO 100; LCP 1.4 s, CLS 0, TBT 0 ms.
-- Production deployment used `/opt/fleet/lib/deploy-static.sh lift-receipt-log
-  dist`; final Azure deployment ID was
-  `3c417773-2bdc-4837-96c4-a88206ef2a53`.
-- Live `/opt/fleet/lib/verify-url.sh` passed both `/` and `/?demo=1` with HTTP
-  200 and no console errors. `npm run verify:live` passed six routes, demo
-  isolation, offline reload/logging, zero external demo requests, and zero
-  serious/critical Axe violations after the final redeploy.
-- Final production mobile Lighthouse on `/?demo=1`: Performance 100,
-  Accessibility 100, Best Practices 100, SEO 100; LCP 1.0 s, CLS 0, TBT 0 ms.
-- The cold billing check found the exact `lift-receipt-log` catalogue entry at
-  900 USD cents. Its checkout returned HTTP 303 to the hosted Dodo checkout.
-
-Screenshots are generated at:
-
-- `test-results/evidence/mobile-first-screen.png`
-- `test-results/evidence/mobile-demo-first-screen.png`
-- `test-results/evidence/live/cold-mobile-root.png`
-- `test-results/evidence/live/cold-mobile-demo.png`
-- `test-results/evidence/live/cold-mobile-offline.png`
-- `test-results/evidence/live-root/screenshot-desktop.png`
-- `test-results/evidence/live-root/screenshot-mobile.png`
-- `test-results/evidence/live-demo/screenshot-desktop.png`
-- `test-results/evidence/live-demo/screenshot-mobile.png`
-
-## Run and verify
+## Reproduce
 
 ```sh
 npm ci
@@ -87,10 +48,6 @@ npm run build
 npm run verify:live -- https://lift-receipt-log.sociobot.in test-results/evidence/live
 ```
 
-To repeat every claim separately, run each `test` command in
-`.factory/claims.json` from a fresh clone.
-
-## Known gaps and next steps
-
-None. No review finding, serious/critical Axe issue, claim failure, console
-error, cross-origin demo request, offline failure, or deployment issue remains.
+Then inspect `/definitely-missing` at 390 by 844 CSS pixels. Remediation must
+make the exact `npm test` command pass and extend 44 by 44 target sizing/testing
+to the 404 page before another release decision.
