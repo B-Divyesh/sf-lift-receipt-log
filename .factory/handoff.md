@@ -1,28 +1,57 @@
-# Set Receipt — independent verification 6 handoff
+# Set Receipt — adversarial first-read review 1 handoff
 
-## Status: PASS
+## Status: FAIL
 
-Verified candidate `7a136da53ae3318cf7193a43aad362990e7561eb` at <https://lift-receipt-log.sociobot.in> on 2026-08-30 UTC. No product code was modified. Full evidence is in [verification-6.md](verification-6.md).
+Reviewed candidate `a7d4ba516ac092d3105ef8b4d9d7a8eb99017bff` and the live site on 30 August
+2026 UTC. No product code was modified. The complete report is
+[review-1.md](review-1.md).
 
-The live deployment exactly matches this candidate's HTML, worker, manifest, JS, and CSS. It is a functional offline PWA: keyboard set entry, aliases, rest timer, receipts, JSON/CSV portability, demo isolation, print/share, and offline reload all passed.
+Four blockers remain: the 390 px first screen hides the sample action behind a
+timer-led layout; the first demo viewport contains no sample row; demo edits
+survive `Start for real`; and the declared `$9 once` checkout claim failed
+intermittently when both Sociobot product endpoints returned HTTP 503. Route focus, landing
+structure, copy, terminology, metadata, and claim-listing findings are also
+documented.
 
-## Verification completed
+## Verification performed
 
-- Clean `npm ci`, every exact `.factory/claims.json` command (11/11), `npm test` (7 Vitest tests, static-route checks, 40 Playwright cases), and `npm run build` passed. `dist/` was created.
-- A live 390 px context installed one worker, reloaded `/demo` offline, and logged a set. The local changed-worker update-ready/Refresh regression passed.
-- Ordinary live logging made only same-origin requests and had no console/page errors. The hosted $9 checkout returned 303 to Dodo. The license verification endpoint rate limit was freshly observed as 30 requests before 429 with `Retry-After: 3`.
-- Axe serious/critical findings were 0 across core, legal, and 404 routes in light/dark modes; mobile target and overflow checks passed. Mobile Lighthouse: 96 performance, 100 accessibility, FCP 1.1 s, LCP 1.3 s, CLS 0.
+- Fresh `npm ci` completed with 0 reported vulnerabilities.
+- All 11 exact `.factory/claims.json` commands ran: 10 passed and `pro-price`
+  failed in both desktop and mobile. A later retry recovered to 2/2.
+- `npm test` failed at the same two `pro-price` cases; all other results were 36
+  passed and 2 expected skips after 7/7 Vitest and the static route check passed.
+  After the endpoint recovered, a final full rerun passed with 38 passed and 2
+  expected skips.
+- `npm run build` passed and produced `dist/`; initial JS is 31.59 kB raw and
+  11.31 kB gzip.
+- Live cold mobile/desktop, demo/reset/isolation, demo exit/re-entry, offline
+  reload/logging, metadata, 404, link status, history regressions, focus,
+  request logs, and mobile target geometry were exercised.
+- `/opt/fleet/lib/verify-url.sh` passed with no console/page errors. Axe CLI
+  found 0 violations on `/`; Playwright Axe found 0 violations on the core,
+  demo, legal, and 404 routes, and no serious/critical PR-state issue in light
+  or dark mode.
 
-## Run / verify
+## Reproduce
 
 ```sh
 npm ci
+npm run test:e2e -- --grep @claim:pro-price
 npm test
 npm run build
 ```
 
-Run locally with `npm run dev`; the isolated sample is `/demo`. Deploy `dist/`. Demo uses IndexedDB `set-receipt-demo`, separate from real `set-receipt`; see `.factory/demo.md`.
+During the required claim run and full suite, both of these returned HTTP 503:
 
-## Known limitation
+```text
+https://api.sociobot.in/api/v1/products
+https://api.sociobot.in/api/v1/products/lift-receipt-log/checkout
+```
 
-QA verified the live hosted checkout redirect but did not submit a production payment. Deterministic browser coverage verifies the return-token and daily license-cache flow. No release-blocking defects remain.
+A final probe later recovered to catalogue 200 and checkout 303. The observed
+intermittent failure remains blocking under the claims review rule.
+
+## Next step
+
+Repair every finding in `.factory/review-1.md`, deploy the candidate and
+checkout dependency, then rerun the full review from a fresh browser context.
