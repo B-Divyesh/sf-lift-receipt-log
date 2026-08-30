@@ -28,7 +28,7 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
-test('@claim:keyboard-receipt logs advertised set formats by keyboard and files an immutable receipt', async ({ page }) => {
+test('@claim:keyboard-receipt logs advertised set formats by keyboard and keeps the finished receipt after reload', async ({ page }) => {
   await page.getByLabel('Exercise').fill('sq');
   await page.getByLabel('Weight × reps').fill('225x5');
   await page.getByLabel('Weight × reps').press('Enter');
@@ -222,7 +222,7 @@ test('@claim:demo-sandbox sample data is one click away, visible, isolated, and 
   await page.getByLabel('Weight × reps').press('Enter');
 
   await page.getByRole('link', { name: 'Try it with sample data' }).click();
-  await expect(page).toHaveURL(/\/demo$/);
+  await expect(page).toHaveURL('http://127.0.0.1:4173/?demo=1');
   await expect(page.getByText('Demo — sample data, nothing is saved to your log')).toBeVisible();
   await expect(page.locator('.set-row')).toHaveCount(3);
   await expect(page.getByText('195lb × 5', { exact: true })).toBeVisible();
@@ -239,7 +239,7 @@ test('@claim:demo-sandbox sample data is one click away, visible, isolated, and 
   await expect(page.getByText('Demo — sample data, nothing is saved to your log')).toHaveCount(0);
   await expect(page.locator('.set-row')).toHaveCount(1);
   await expect(page.locator('.set-exercise').getByText('Squat', { exact: true })).toBeVisible();
-  await page.goto('/demo');
+  await page.goto('/?demo=1');
   await expect(page.locator('.set-row')).toHaveCount(3);
   await expect(page.getByText('195lb × 5', { exact: true })).toBeVisible();
 });
@@ -247,7 +247,7 @@ test('@claim:demo-sandbox sample data is one click away, visible, isolated, and 
 test('@claim:local-private ordinary demo logging sends requests only to this site', async ({ page }) => {
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
-  await page.goto('/demo');
+  await page.goto('/?demo=1');
   await page.getByLabel('Exercise').fill('ohp');
   await page.getByLabel('Weight × reps').fill('95x5');
   await page.getByLabel('Weight × reps').press('Enter');
@@ -260,10 +260,32 @@ test('@claim:local-private ordinary demo logging sends requests only to this sit
 test('@claim:no-third-party-assets loads no analytics, ads, external fonts, or third-party scripts', async ({ page }) => {
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
-  for (const path of ['/', '/demo', '/privacy', '/terms', '/not-a-real-route']) {
+  for (const path of ['/', '/?demo=1', '/privacy', '/terms', '/not-a-real-route']) {
     await page.goto(path);
   }
   expect(requests.filter((url) => new URL(url).origin !== 'http://127.0.0.1:4173')).toEqual([]);
+});
+
+test('@claim:no-training-advice provides record keeping without prescriptive training or injury guidance', async ({ page }) => {
+  await expect(page.getByText('It does not give training or injury advice.')).toBeVisible();
+  const renderedCopy = [await page.locator('body').innerText()];
+  await page.getByRole('button', { name: 'Receipts' }).click();
+  renderedCopy.push(await page.locator('body').innerText());
+  await page.getByRole('button', { name: 'Setup' }).click();
+  renderedCopy.push(await page.locator('body').innerText());
+  await page.goto('/?demo=1');
+  renderedCopy.push(await page.locator('body').innerText());
+  await page.getByRole('button', { name: 'Setup' }).click();
+  renderedCopy.push(await page.locator('body').innerText());
+  await page.goto('/privacy');
+  renderedCopy.push(await page.locator('body').innerText());
+  await page.goto('/terms');
+  await expect(page.getByText(/not training, medical, or injury advice/)).toBeVisible();
+  renderedCopy.push(await page.locator('body').innerText());
+  const publicCopy = renderedCopy.join('\n').toLowerCase();
+  for (const prescriptivePhrase of ['you should train', 'you should lift', 'recommended workout', 'injury treatment', 'medical diagnosis']) {
+    expect(publicCopy).not.toContain(prescriptivePhrase);
+  }
 });
 
 test('@claim:pro-price shows the one-time price and Sociobot checkout', async ({ page }) => {
@@ -296,9 +318,9 @@ test('@claim:pro-features verifies once, enables custom rest, and persists priva
   await page.goto('/?license=qa-license');
   await expect(page).toHaveURL('http://127.0.0.1:4173/');
   await page.getByRole('button', { name: 'Setup' }).click();
-  await expect(page.getByText('Pro is active on this device.')).toBeVisible();
+  await expect(page.getByText('Pro is active in this browser.')).toBeVisible();
   await page.locator('#custom-rest').fill('150');
-  await page.getByRole('button', { name: 'Set', exact: true }).click();
+  await page.getByRole('button', { name: 'Save rest time', exact: true }).click();
   await expect(page.locator('.toast')).toHaveText('Custom rest saved.');
 
   await page.getByRole('button', { name: 'Log' }).click();
@@ -330,7 +352,7 @@ test('@claim:pro-features verifies once, enables custom rest, and persists priva
   await expect.poll(() => verificationRequests).toBe(1);
   await expect(page.evaluate(() => localStorage.getItem('sb_license:lift-receipt-log'))).resolves.toBe('qa-license');
   await page.getByRole('button', { name: 'Remove license' }).click();
-  await expect(page.locator('.toast')).toHaveText('License removed from this device.');
+  await expect(page.locator('.toast')).toHaveText('License removed from this browser.');
   await expect(page.evaluate(() => localStorage.getItem('sb_license:lift-receipt-log'))).resolves.toBeNull();
   await expect(page.getByRole('link', { name: 'Buy Pro' })).toBeVisible();
 });
@@ -372,10 +394,63 @@ test('moves focus and announces the route heading for navigation, Back, Forward,
   await expect(page.getByRole('heading', { name: 'Terms' })).toHaveAttribute('tabindex', '-1');
 });
 
+test('uses reviewed literal labels and browser-scoped storage wording', async ({ page }) => {
+  await expect(page.locator('#network-status')).toHaveText('Saved in this browser');
+  await expect(page.getByText('LOCAL WORKOUT LOG', { exact: true })).toBeVisible();
+  await page.getByLabel('Exercise').fill('bp');
+  await page.getByLabel('Weight × reps').fill('185x5');
+  await page.getByLabel('Weight × reps').press('Enter');
+  await expect(page.getByText(/ACTIVE WORKOUT/)).toBeVisible();
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByText('COMPLETED WORKOUT', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'All receipts' }).click();
+  await expect(page.getByText('FINISHED WORKOUTS', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Setup' }).click();
+  await expect(page.getByText('LOGGING, DATA, AND PRO', { exact: true })).toBeVisible();
+  await expect(page.getByText('PRO FEATURES', { exact: true })).toBeVisible();
+
+  await page.goto('/?demo=1&view=settings');
+  await expect(page.getByRole('button', { name: 'Save rest time' })).toBeVisible();
+  await page.goto('/privacy');
+  await expect(page.getByText('WORKOUT AND LICENSE DATA', { exact: true })).toBeVisible();
+  await page.goto('/terms');
+  await expect(page.getByText('USE AND PRO LICENSE TERMS', { exact: true })).toBeVisible();
+
+  const obsolete = /IMMUTABLE TRAINING RECORD|OPEN RECEIPT|ONE-TIME UNLOCK|LOCAL LIFT LOG|THE PLAIN-LANGUAGE VERSION|SHORT AND STRAIGHT|YOUR TRAINING, YOUR FILE|MAKE THE SHORTHAND YOURS/;
+  await expect(page.locator('body')).not.toContainText(obsolete);
+});
+
+test('sets route titles, metadata, canonical URLs, legal links, and a real 404', async ({ page }) => {
+  const routes = [
+    { path: '/', title: 'Set Receipt — log lifts and keep receipts', canonical: '/' },
+    { path: '/?demo=1', title: 'Demo — Set Receipt', canonical: '/?demo=1' },
+    { path: '/?view=history', title: 'Receipts — Set Receipt', canonical: '/?view=history' },
+    { path: '/?view=settings', title: 'Setup — Set Receipt', canonical: '/?view=settings' },
+    { path: '/privacy', title: 'Privacy — Set Receipt', canonical: '/privacy' },
+    { path: '/terms', title: 'Terms — Set Receipt', canonical: '/terms' },
+  ];
+  for (const route of routes) {
+    const response = await page.goto(route.path);
+    expect(response?.status(), route.path).toBe(200);
+    await expect(page).toHaveTitle(route.title);
+    await expect(page.locator('main')).toHaveCount(1);
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /\S+/);
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /set-receipt-social\.webp$/);
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
+    await expect(page.locator('#canonical-url')).toHaveAttribute('href', `https://lift-receipt-log.sociobot.in${route.canonical}`);
+    await expect(page.locator('footer').getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy');
+    await expect(page.locator('footer').getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/terms');
+  }
+  const missing = await page.goto('/definitely-missing');
+  expect(missing?.status()).toBe(404);
+  await expect(page).toHaveTitle('Page not found — Set Receipt');
+});
+
 test('has no serious accessibility violations on core and legal screens', async ({ page }) => {
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
-    for (const path of ['/', '/demo', '/privacy', '/terms', '/not-a-real-route']) {
+    for (const path of ['/', '/?demo=1', '/privacy', '/terms', '/not-a-real-route']) {
       await page.goto(path);
       await expect(page.locator('h1')).toHaveCount(1);
       const results = await new AxeBuilder({ page }).analyze();
@@ -415,11 +490,11 @@ test('keeps the visible PR stamp accessible in light and dark logged-workout sta
   }
 });
 
-test('@claim:offline-reload installs despite the unavailable host config, then reloads and logs offline', async ({ browser }) => {
+test('@claim:offline-reload registers its service worker, then reloads and logs offline', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   try {
-    await page.goto('http://127.0.0.1:4173/demo');
+    await page.goto('http://127.0.0.1:4173/?demo=1');
     await expect.poll(() => page.evaluate(async () => (await fetch('/staticwebapp.config.json')).status)).toBe(404);
     await page.evaluate(async () => { await navigator.serviceWorker.ready; });
     await page.reload();

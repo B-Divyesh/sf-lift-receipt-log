@@ -1,14 +1,15 @@
 # Set Receipt
 
-Set Receipt logs lifts from the keyboard and stores them on this device. Enter
-`225x5`, then finish the workout to keep a compact receipt.
+Set Receipt logs lifts from the keyboard and stores them in this browser. It is
+for lifters who record weight and reps during a workout. Enter `225x5`, then
+finish the workout to keep a workout receipt.
 
 Live: <https://lift-receipt-log.sociobot.in>
 
-Demo: <https://lift-receipt-log.sociobot.in/demo>. It opens a sample Bench
+Demo: <https://lift-receipt-log.sociobot.in/?demo=1>. It opens a sample Bench
 press workout in separate browser storage and does not change your workout log.
 
-## What it does
+## What Set Receipt does
 
 - Logs `weight × reps`; `225x5`, `100x8kg`, and `135 × 10` work.
 - Expands editable exercise aliases such as `sq`, `bp`, `dl`, and `ohp`.
@@ -16,7 +17,7 @@ press workout in separate browser storage and does not change your workout log.
 - Keeps active workouts and finished receipts in this browser’s storage.
 - Shares plain-text receipts and prints cleanly to paper or PDF.
 - Exports every record as JSON or CSV and restores JSON backups.
-- Installs as an app and reloads offline after the first visit.
+- Reloads and logs offline after the first visit.
 
 The free logger includes aliases, fixed rest presets, receipts, export, and
 import. A $9 one-time Pro license adds custom rest intervals and private receipt
@@ -60,7 +61,7 @@ license token and checks it with `api.sociobot.in` no more than once a day. See
 
 ## Deploy
 
-Deploy `dist/` as a static site with `/privacy`, `/terms`, and `/demo` routed
+Deploy `dist/` as a static site with `/privacy`, `/terms`, and `/?demo=1` routed
 to the app and unknown routes served by `404.html`. Visual rationale and
 generated-asset provenance are in [`.factory/design.md`](.factory/design.md).
 MIT licensed.

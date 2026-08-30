@@ -1,1 +1,1 @@
-Log lifts and keep offline workout receipts on this device.
+Log lifts in this browser and keep workout receipts, even offline.

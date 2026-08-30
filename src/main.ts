@@ -23,6 +23,7 @@ let updateAvailable = false;
 let refreshAfterUpdate = false;
 const demoMode = location.pathname === '/demo' || routeParameters.get('demo') === '1';
 const storageNamespace: StorageNamespace = demoMode ? 'demo' : 'real';
+const demoEntryPath = '/?demo=1';
 
 const escapeHtml = (value: unknown) => String(value)
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -38,10 +39,10 @@ function shell(content: string, page: 'app' | 'legal' = 'app'): string {
     ? `<nav aria-label="Primary"><button class="nav-button ${view === 'log' ? 'active' : ''}" data-view="log">Log</button><button class="nav-button ${view === 'history' ? 'active' : ''}" data-view="history">Receipts</button><button class="nav-button ${view === 'settings' ? 'active' : ''}" data-view="settings">Setup</button></nav>`
     : `<nav aria-label="Primary"><button class="nav-button" data-route="app-log">Log</button><button class="nav-button" data-route="app-history">Receipts</button><button class="nav-button" data-route="app-settings">Setup</button></nav>`;
   return `<header class="site-header">
-    <a class="wordmark" href="${demoMode ? '/demo' : '/'}" data-route="home" aria-label="SR — Set Receipt home"><span aria-hidden="true">SR</span> Set Receipt</a>
+    <a class="wordmark" href="${demoMode ? demoEntryPath : '/'}" data-route="home" aria-label="SR — Set Receipt home"><span aria-hidden="true">SR</span> Set Receipt</a>
     ${nav}
   </header>
-  <div class="network-status" id="network-status" role="status">${navigator.onLine ? 'Saved on this device' : 'Offline · logging still works'}</div>
+  <div class="network-status" id="network-status" role="status">${navigator.onLine ? 'Saved in this browser' : 'Offline · logging still works'}</div>
   ${demoMode ? '<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved to your log</strong><div><button data-action="reset-demo">Reset demo</button><button data-action="exit-demo">Start for real</button></div></aside>' : ''}
   ${content}
   <footer><p>Workout data stays in this browser. License checks use Sociobot.</p><nav aria-label="Legal"><a href="/privacy" data-route="privacy">Privacy</a><a href="/terms" data-route="terms">Terms</a></nav><p class="disclosure">Built by Param Factory · v1.0.0 · Generated editorial image.</p></footer>
@@ -55,12 +56,12 @@ function renderLoading(): void {
 }
 
 function renderLegal(kind: 'privacy' | 'terms'): void {
-  const privacy = `<main id="main" class="legal"><p class="eyebrow">THE PLAIN-LANGUAGE VERSION</p><h1>Privacy</h1>
-    <p><strong>Your workout log stays in this browser.</strong> Set Receipt stores workouts, aliases, and preferences on this device. Ordinary logging does not send workout data to us.</p>
-    <h2>What leaves your device</h2><p>If you choose Pro, the browser sends your license token to Sociobot to check it. The checkout link opens a hosted Sociobot payment page.</p>
+  const privacy = `<main id="main" class="legal"><p class="eyebrow">WORKOUT AND LICENSE DATA</p><h1>Privacy</h1>
+    <p><strong>Your workout log stays in this browser.</strong> Set Receipt stores workouts, aliases, and preferences in this browser. Ordinary logging does not send workout data to us.</p>
+    <h2>What leaves your browser</h2><p>If you choose Pro, the browser sends your license token to Sociobot to check it. The checkout link opens a hosted Sociobot payment page.</p>
     <h2>Your controls</h2><p>You can export a complete JSON backup or CSV, import a backup, and erase local workout data from Setup. You can also remove a saved license there. Shared or printed receipts leave the app only when you choose.</p>
     <h2>Contact</h2><p>Questions can be sent through <a href="https://sociobot.in">sociobot.in</a>. Effective 27 August 2026.</p></main>`;
-  const terms = `<main id="main" class="legal"><p class="eyebrow">SHORT AND STRAIGHT</p><h1>Terms</h1>
+  const terms = `<main id="main" class="legal"><p class="eyebrow">USE AND PRO LICENSE TERMS</p><h1>Terms</h1>
     <p>Set Receipt is a personal record-keeping utility, not training, medical, or injury advice. You are responsible for your exercise choices and for keeping backups of data that matters to you.</p>
     <h2>License and purchase</h2><p>The free logger remains useful without payment. Set Receipt Pro is a $9 one-time purchase for custom rest intervals and private receipt notes when a valid license is present.</p>
     <h2>Availability</h2><p>The software is provided “as is.” Browser storage can be cleared or lost. Export regularly.</p>
@@ -72,7 +73,7 @@ function renderNotFound(): void {
   app.innerHTML = shell(`<main id="main" class="legal not-found" tabindex="-1"><p class="eyebrow">404 / PAGE NOT FOUND</p>
     <h1>That page is not in your log.</h1>
     <p>Use the logger to record a set, or open the sample workout.</p>
-    <p class="not-found-actions"><a class="primary-button" href="/" data-route="home">Open the logger</a><a class="secondary-button" href="/demo">Try sample data</a></p></main>`, 'legal');
+    <p class="not-found-actions"><a class="primary-button" href="/" data-route="home">Open the logger</a><a class="secondary-button" href="${demoEntryPath}">Try sample data</a></p></main>`, 'legal');
 }
 
 function setRows(workout: Workout): string {
@@ -89,13 +90,13 @@ function setRows(workout: Workout): string {
 function logView(): string {
   const workout = activeWorkout();
   const exerciseNames = [...new Set([...data.aliases.map((item) => item.exercise), ...data.workouts.flatMap((item) => item.sets.map((set) => set.exercise))])].sort();
-  const activeSheet = workout ? `<section class="active-sheet" aria-labelledby="active-title"><div class="sheet-heading"><div><p class="eyebrow">OPEN RECEIPT · ${dateLabel(workout.startedAt)}</p><h2 id="active-title">${demoMode ? 'Sample workout' : 'Today’s sets'}</h2></div><span class="set-count">${workout.sets.length} SET${workout.sets.length === 1 ? '' : 'S'}</span></div>${setRows(workout)}<div class="sheet-actions"><button class="secondary-button" data-action="finish-workout" ${workout.sets.length ? '' : 'disabled'}>Finish workout</button><span>${workoutVolume(workout).toLocaleString()} load volume</span></div></section>` : '';
+  const activeSheet = workout ? `<section class="active-sheet" aria-labelledby="active-title"><div class="sheet-heading"><div><p class="eyebrow">ACTIVE WORKOUT · ${dateLabel(workout.startedAt)}</p><h2 id="active-title">${demoMode ? 'Sample workout' : 'Today’s sets'}</h2></div><span class="set-count">${workout.sets.length} SET${workout.sets.length === 1 ? '' : 'S'}</span></div>${setRows(workout)}<div class="sheet-actions"><button class="secondary-button" data-action="finish-workout" ${workout.sets.length ? '' : 'disabled'}>Finish workout</button><span>${workoutVolume(workout).toLocaleString()} load volume</span></div></section>` : '';
   return `<main id="main" class="log-layout">
     <section class="log-main" aria-labelledby="page-title">
-      <p class="eyebrow">LOCAL LIFT LOG / ${navigator.onLine ? 'READY' : 'OFFLINE'}</p>
+      <p class="eyebrow">LOCAL WORKOUT LOG${navigator.onLine ? '' : ' · OFFLINE'}</p>
       <h1 id="page-title">Log sets.<br><span>Keep a workout receipt.</span></h1>
       <p class="lede">For lifters who record weight and reps during a workout.</p>
-      ${demoMode ? activeSheet : '<div class="demo-entry"><a class="secondary-button" href="/demo">Try it with sample data</a><span>Loads a separate sample log.</span></div>'}
+      ${demoMode ? activeSheet : `<div class="demo-entry"><a class="secondary-button" href="${demoEntryPath}">Try it with sample data</a><span>Loads a separate sample log.</span></div>`}
       <ul class="hero-facts" aria-label="Product facts"><li>Works offline after your first visit.</li><li>Workout data stays in this browser.</li><li>Free core tools. Pro extras cost $9 once.</li></ul>
       <form id="set-form" class="entry-docket" novalidate>
         <div class="entry-field exercise-field"><label for="exercise">Exercise</label><input id="exercise" name="exercise" list="exercise-list" autocomplete="off" enterkeyhint="next" placeholder="Squat or sq" required><datalist id="exercise-list">${exerciseNames.map((name) => `<option value="${escapeHtml(name)}"></option>`).join('')}${data.aliases.map((item) => `<option value="${escapeHtml(item.alias)}">${escapeHtml(item.exercise)}</option>`).join('')}</datalist></div>
@@ -117,7 +118,7 @@ function landingSections(): string {
   return `<section class="landing-sections" aria-label="Set Receipt details">
     <section><p class="eyebrow">HOW IT WORKS</p><h2>Log a workout in three steps</h2><ol><li><strong>Enter</strong> an exercise and weight × reps.</li><li><strong>Rest</strong> with the timer that starts after each set.</li><li><strong>Finish</strong> the workout to file and share its receipt.</li></ol></section>
     <section><p class="eyebrow">PRIVACY AND LIMITS</p><h2>What Set Receipt does not do</h2><p>It does not give training or injury advice. Workout data stays in this browser until you export or share it.</p></section>
-    <section class="landing-pro"><p class="eyebrow">ONE-TIME UNLOCK</p><h2>Set Receipt Pro: $9 once</h2><p>Pro adds custom rest intervals and private notes on finished receipts.</p><a class="primary-button" href="${CHECKOUT_URL}">Buy Pro</a><p><a href="/privacy" data-route="privacy">Privacy</a> · <a href="/terms" data-route="terms">Terms</a></p></section>
+    <section class="landing-pro"><p class="eyebrow">PRO FEATURES</p><h2>Set Receipt Pro: $9 once</h2><p>Pro adds custom rest intervals and private notes on finished receipts.</p><a class="primary-button" href="${CHECKOUT_URL}">Buy Pro</a><p><a href="/privacy" data-route="privacy">Privacy</a> · <a href="/terms" data-route="terms">Terms</a></p></section>
   </section>`;
 }
 
@@ -135,18 +136,18 @@ function receiptMarkup(workout: Workout, compact = false): string {
 function historyView(): string {
   const receipts = data.workouts.filter((workout) => workout.endedAt).sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   const chosen = receipts.find((workout) => workout.id === selectedReceipt);
-  if (chosen) return `<main id="main" class="history-page"><div class="page-heading"><div><p class="eyebrow">IMMUTABLE TRAINING RECORD</p><h1>Workout receipt</h1></div><button class="secondary-button" data-action="back-history">← All receipts</button></div><div class="receipt-wrap">${receiptMarkup(chosen)}<div class="receipt-actions"><button class="primary-button" data-share="${escapeHtml(chosen.id)}">Share receipt</button><button class="secondary-button" data-action="print">Print / save PDF</button></div>${isPro ? `<label class="note-field" for="receipt-note">Private receipt note<textarea id="receipt-note" data-note="${escapeHtml(chosen.id)}" maxlength="180" placeholder="How did it feel?">${escapeHtml(chosen.note ?? '')}</textarea></label>` : `<div class="pro-nudge"><strong>Pro extra</strong><p>Add private notes to completed receipts.</p><button data-view="settings">See Pro</button></div>`}</div></main>`;
-  return `<main id="main" class="history-page"><div class="page-heading"><div><p class="eyebrow">YOUR TRAINING, YOUR FILE</p><h1>Workout receipts</h1></div><span class="big-count">${receipts.length.toString().padStart(2, '0')}</span></div>
+  if (chosen) return `<main id="main" class="history-page"><div class="page-heading"><div><p class="eyebrow">COMPLETED WORKOUT</p><h1>Workout receipt</h1></div><button class="secondary-button" data-action="back-history">← All receipts</button></div><div class="receipt-wrap">${receiptMarkup(chosen)}<div class="receipt-actions"><button class="primary-button" data-share="${escapeHtml(chosen.id)}">Share receipt</button><button class="secondary-button" data-action="print">Print / save PDF</button></div>${isPro ? `<label class="note-field" for="receipt-note">Private receipt note<textarea id="receipt-note" data-note="${escapeHtml(chosen.id)}" maxlength="180" placeholder="How did it feel?">${escapeHtml(chosen.note ?? '')}</textarea></label>` : `<div class="pro-nudge"><strong>Pro extra</strong><p>Add private notes to completed receipts.</p><button data-view="settings">See Pro</button></div>`}</div></main>`;
+  return `<main id="main" class="history-page"><div class="page-heading"><div><p class="eyebrow">FINISHED WORKOUTS</p><h1>Workout receipts</h1></div><span class="big-count">${receipts.length.toString().padStart(2, '0')}</span></div>
     ${receipts.length ? `<div class="receipt-grid">${receipts.map((workout) => `<button class="receipt-card" data-receipt="${escapeHtml(workout.id)}"><span>${dateLabel(workout.startedAt)}</span><strong>${workout.sets.length} sets</strong><span>${workoutVolume(workout).toLocaleString()} volume</span><i>View receipt →</i></button>`).join('')}</div>` : `<section class="history-empty"><img src="/assets/set-receipt-hero.webp" width="800" height="800" decoding="async" alt="A blank paper receipt curling across blue weight plates beside an orange barbell collar"><div><p class="eyebrow">NO RECEIPTS YET</p><h2>Finish a workout to file it here.</h2><p>Your active sets are safe in the Log tab.</p><button class="primary-button" data-view="log">Log a set</button></div></section>`}
   </main>`;
 }
 
 function settingsView(): string {
-  return `<main id="main" class="settings-page"><div class="page-heading"><div><p class="eyebrow">MAKE THE SHORTHAND YOURS</p><h1>Setup</h1></div></div>
-    <div class="settings-grid"><section><h2>Logging defaults</h2><fieldset><legend>Default unit</legend><label><input type="radio" name="unit" value="lb" ${data.settings.unit === 'lb' ? 'checked' : ''}> Pounds (lb)</label><label><input type="radio" name="unit" value="kg" ${data.settings.unit === 'kg' ? 'checked' : ''}> Kilograms (kg)</label></fieldset><label for="rest-select">Rest timer</label><select id="rest-select" data-setting="rest"><option value="60" ${data.settings.restSeconds === 60 ? 'selected' : ''}>1 minute</option><option value="90" ${data.settings.restSeconds === 90 ? 'selected' : ''}>1½ minutes</option><option value="120" ${data.settings.restSeconds === 120 ? 'selected' : ''}>2 minutes</option><option value="180" ${data.settings.restSeconds === 180 ? 'selected' : ''}>3 minutes</option>${!['60','90','120','180'].includes(String(data.settings.restSeconds)) ? `<option value="${data.settings.restSeconds}" selected>${data.settings.restSeconds} seconds</option>` : ''}</select>${isPro ? `<form id="custom-rest-form" class="inline-form"><label for="custom-rest">Custom seconds</label><input id="custom-rest" type="number" min="15" max="900" value="${data.settings.restSeconds}"><button>Set</button></form>` : '<p class="form-help">Pro adds any custom rest interval.</p>'}</section>
+  return `<main id="main" class="settings-page"><div class="page-heading"><div><p class="eyebrow">LOGGING, DATA, AND PRO</p><h1>Setup</h1></div></div>
+    <div class="settings-grid"><section><h2>Logging defaults</h2><fieldset><legend>Default unit</legend><label><input type="radio" name="unit" value="lb" ${data.settings.unit === 'lb' ? 'checked' : ''}> Pounds (lb)</label><label><input type="radio" name="unit" value="kg" ${data.settings.unit === 'kg' ? 'checked' : ''}> Kilograms (kg)</label></fieldset><label for="rest-select">Rest timer</label><select id="rest-select" data-setting="rest"><option value="60" ${data.settings.restSeconds === 60 ? 'selected' : ''}>1 minute</option><option value="90" ${data.settings.restSeconds === 90 ? 'selected' : ''}>1½ minutes</option><option value="120" ${data.settings.restSeconds === 120 ? 'selected' : ''}>2 minutes</option><option value="180" ${data.settings.restSeconds === 180 ? 'selected' : ''}>3 minutes</option>${!['60','90','120','180'].includes(String(data.settings.restSeconds)) ? `<option value="${data.settings.restSeconds}" selected>${data.settings.restSeconds} seconds</option>` : ''}</select>${isPro ? `<form id="custom-rest-form" class="inline-form"><label for="custom-rest">Custom seconds</label><input id="custom-rest" type="number" min="15" max="900" value="${data.settings.restSeconds}"><button>Save rest time</button></form>` : '<p class="form-help">Pro adds any custom rest interval.</p>'}</section>
       <section><div class="section-title"><div><h2>Exercise aliases</h2><p>Type the short code in the exercise box.</p></div></div><form id="alias-form" class="alias-form"><label for="alias-code">Short code<input id="alias-code" maxlength="12" placeholder="rdl" required></label><label for="alias-exercise">Exercise<input id="alias-exercise" maxlength="48" placeholder="Romanian deadlift" required></label><button class="secondary-button">Add alias</button></form><ul class="alias-list">${data.aliases.map((item) => `<li><code>${escapeHtml(item.alias)}</code><span>→ ${escapeHtml(item.exercise)}</span><button data-delete-alias="${escapeHtml(item.id)}" aria-label="Delete ${escapeHtml(item.alias)} alias" ${DEFAULT_ALIASES.some((base) => base.id === item.id) ? 'title="Default alias"' : ''}>×</button></li>`).join('')}</ul></section>
-      <section><h2>Your data</h2><p>Back up or move every workout. Export is always free.</p><div class="stack-actions"><button class="secondary-button" data-action="export-json">Export JSON</button><button class="secondary-button" data-action="export-csv">Export CSV</button><label class="file-button">Import JSON<input id="import-file" type="file" accept="application/json,.json"></label><button class="danger-button" data-action="erase-data">Erase all local data</button></div><p class="form-help">Import replaces the log on this device after confirmation.</p></section>
-      <section class="pro-panel"><p class="eyebrow">ONE-TIME UNLOCK</p><h2>Set Receipt Pro</h2><p class="price"><strong>$9</strong> once</p><ul><li>Custom rest intervals</li><li>Private notes on receipts</li></ul>${isPro ? (demoMode ? '<p class="license-active">✓ Pro sample features are on in demo.</p>' : '<p class="license-active">✓ Pro is active on this device.</p><div class="stack-actions"><button class="secondary-button" data-action="verify-license">Check license</button><button class="secondary-button" data-action="remove-license">Remove license</button></div>') : `<a class="primary-button" href="${CHECKOUT_URL}">Buy Pro</a><details><summary>Have a license?</summary><form id="license-form"><label for="license-token">Paste license token</label><input id="license-token" autocomplete="off" required><button class="secondary-button">Verify and unlock</button></form></details>`}<p class="legal-small">Checkout is hosted by Sociobot. <a href="/privacy" data-route="privacy">Privacy</a> · <a href="/terms" data-route="terms">Terms</a></p></section>
+      <section><h2>Your data</h2><p>Back up or move every workout. Export is always free.</p><div class="stack-actions"><button class="secondary-button" data-action="export-json">Export JSON</button><button class="secondary-button" data-action="export-csv">Export CSV</button><label class="file-button">Import JSON<input id="import-file" type="file" accept="application/json,.json"></label><button class="danger-button" data-action="erase-data">Erase all local data</button></div><p class="form-help">Import replaces this browser’s log after confirmation.</p></section>
+      <section class="pro-panel"><p class="eyebrow">PRO FEATURES</p><h2>Set Receipt Pro</h2><p class="price"><strong>$9</strong> once</p><ul><li>Custom rest intervals</li><li>Private notes on receipts</li></ul>${isPro ? (demoMode ? '<p class="license-active">✓ Pro sample features are on in demo.</p>' : '<p class="license-active">✓ Pro is active in this browser.</p><div class="stack-actions"><button class="secondary-button" data-action="verify-license">Check license</button><button class="secondary-button" data-action="remove-license">Remove license</button></div>') : `<a class="primary-button" href="${CHECKOUT_URL}">Buy Pro</a><details><summary>Have a license?</summary><form id="license-form"><label for="license-token">Paste license token</label><input id="license-token" autocomplete="off" required><button class="secondary-button">Verify Pro license</button></form></details>`}<p class="legal-small">Checkout is hosted by Sociobot. <a href="/privacy" data-route="privacy">Privacy</a> · <a href="/terms" data-route="terms">Terms</a></p></section>
     </div></main>`;
 }
 
@@ -225,7 +226,7 @@ async function persist(message = ''): Promise<void> {
     if (message) showStatus(message);
   } catch {
     storageFailed = true;
-    showError('Could not save on this device. Export your data and check browser storage.');
+    showError('Could not save in this browser. Export your data and check browser storage.');
   }
 }
 
@@ -298,8 +299,10 @@ function navigate(path: string): void {
 function navigateView(nextView: typeof view): void {
   view = nextView;
   selectedReceipt = null;
-  const path = demoMode ? '/demo' : '/';
-  const query = nextView === 'log' ? '' : `?view=${nextView}`;
+  const path = '/';
+  const query = demoMode
+    ? `?demo=1${nextView === 'log' ? '' : `&view=${nextView}`}`
+    : nextView === 'log' ? '' : `?view=${nextView}`;
   history.pushState({}, '', `${path}${query}`);
   render();
   focusRouteHeading();
@@ -346,7 +349,7 @@ app.addEventListener('change', async (event) => {
       let backup: unknown;
       try { backup = JSON.parse(fileText); } catch { throw new Error('That file is not valid JSON. Choose a Set Receipt backup exported by this app and try again.'); }
       const imported = validateImport(backup);
-      if (!confirm(`Replace this device’s log with ${imported.workouts.length} imported workout(s)?`)) return;
+      if (!confirm(`Replace this browser’s log with ${imported.workouts.length} imported workout(s)?`)) return;
       data = imported; await persist('Backup imported.'); render();
     } catch (cause) { showError(cause instanceof Error ? cause.message : 'Could not read that backup.'); render(); }
   }
@@ -362,7 +365,7 @@ app.addEventListener('click', async (event) => {
       navigateView(route.slice(4) as typeof view);
       return;
     }
-    const routePath = route === 'home' ? (demoMode ? '/demo' : '/') : `/${route}${demoMode ? '?demo=1' : ''}`;
+    const routePath = route === 'home' ? (demoMode ? demoEntryPath : '/') : `/${route}${demoMode ? '?demo=1' : ''}`;
     navigate(routePath);
     return;
   }
@@ -398,7 +401,7 @@ app.addEventListener('click', async (event) => {
     case 'export-json': download(`set-receipt-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2), 'application/json'); showStatus('JSON backup exported.'); render(); break;
     case 'export-csv': download(`set-receipt-${new Date().toISOString().slice(0, 10)}.csv`, csvText(data.workouts), 'text/csv'); showStatus('CSV exported.'); render(); break;
     case 'erase-data':
-      if (confirm(`Erase ${data.workouts.length} workout(s), all aliases, and settings from this device? Export first if you need a backup.`)) {
+      if (confirm(`Erase ${data.workouts.length} workout(s), all aliases, and settings from this browser? Export first if you need a backup.`)) {
         data = structuredClone(DEFAULT_DATA);
         selectedReceipt = null;
         restEndsAt = 0;
@@ -441,7 +444,7 @@ app.addEventListener('click', async (event) => {
     case 'remove-license':
       removeLicense();
       isPro = false;
-      showStatus('License removed from this device.');
+      showStatus('License removed from this browser.');
       render();
       break;
     case 'refresh-app': {
