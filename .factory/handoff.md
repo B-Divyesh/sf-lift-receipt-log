@@ -1,57 +1,61 @@
-# Set Receipt — adversarial first-read review 1 handoff
+# Set Receipt — polish round 1 handoff
 
-## Status: FAIL
+## Status: complete
 
-Reviewed candidate `a7d4ba516ac092d3105ef8b4d9d7a8eb99017bff` and the live site on 30 August
-2026 UTC. No product code was modified. The complete report is
-[review-1.md](review-1.md).
+Repair commit: `f437c55b870dc31efa347698b353e895a9880e03`.
 
-Four blockers remain: the 390 px first screen hides the sample action behind a
-timer-led layout; the first demo viewport contains no sample row; demo edits
-survive `Start for real`; and the declared `$9 once` checkout claim failed
-intermittently when both Sociobot product endpoints returned HTTP 503. Route focus, landing
-structure, copy, terminology, metadata, and claim-listing findings are also
-documented.
+The repair resolves every `F-1-1` through `F-1-37` finding in
+[`review-1.md`](review-1.md). The detailed finding-to-change-to-evidence map is
+in [`polish-1.md`](polish-1.md). It preserves the training-docket visual system
+while making the phone first screen action-led, moving sample data into the
+demo’s first view, discarding demo state on exit, completing route behavior,
+and removing unsupported promises.
 
-## Verification performed
+## Verification
 
-- Fresh `npm ci` completed with 0 reported vulnerabilities.
-- All 11 exact `.factory/claims.json` commands ran: 10 passed and `pro-price`
-  failed in both desktop and mobile. A later retry recovered to 2/2.
-- `npm test` failed at the same two `pro-price` cases; all other results were 36
-  passed and 2 expected skips after 7/7 Vitest and the static route check passed.
-  After the endpoint recovered, a final full rerun passed with 38 passed and 2
-  expected skips.
-- `npm run build` passed and produced `dist/`; initial JS is 31.59 kB raw and
-  11.31 kB gzip.
-- Live cold mobile/desktop, demo/reset/isolation, demo exit/re-entry, offline
-  reload/logging, metadata, 404, link status, history regressions, focus,
-  request logs, and mobile target geometry were exercised.
-- `/opt/fleet/lib/verify-url.sh` passed with no console/page errors. Axe CLI
-  found 0 violations on `/`; Playwright Axe found 0 violations on the core,
-  demo, legal, and 404 routes, and no serious/critical PR-state issue in light
-  or dark mode.
+- Clean clone: cloned `f437c55` into `/tmp/lift-receipt-clean-7lewap`, ran
+  `npm ci`, then ran every one of the 13 exact commands in
+  `.factory/claims.json` separately. All passed in desktop Chromium and the
+  390 × 844 mobile project; the clone’s final Playwright status is `passed`.
+- Local quality gate: `npm test` passed: 7/7 Vitest tests, static 404/metadata
+  verification, and 48 Playwright cases (including two expected mobile-only
+  skips). The suite covers keyboard formats and repeated entry, demo isolation
+  and reset, privacy requests, route focus, 404 metadata, Axe, service-worker
+  update, and offline reload.
+- Build: `npm run build` passed and produced `dist/`. Initial JS is 33.80 kB
+  raw / 11.74 kB gzip; CSS is 18.67 kB raw / 4.85 kB gzip.
+- Deployment: `/opt/fleet/lib/deploy-static.sh lift-receipt-log dist` completed
+  successfully (deployment `d923d47a-774a-4cbd-88aa-50776113f9f1`).
+- Cold live check: `https://lift-receipt-log.sociobot.in/` returned the new
+  title and assets. A new 390 px browser context confirmed first-screen CTA,
+  demo first-row visibility, demo exit/reseed, Privacy/Back H1 focus, styled
+  HTTP 404 Open Graph metadata, and no root console errors. Screenshot:
+  `.factory/evidence/live/live-mobile-demo.png` (ignored test evidence).
+- Live PWA: fresh `/demo` service-worker control, offline reload, and logging
+  `Deadlift 325lb × 3` passed.
+- Accessibility: `verify-url.sh` passed for the live root (title/lang/one H1/
+  main/alt/buttons/console). Live Playwright Axe found 0 serious or critical
+  findings across `/`, `/demo`, `/privacy`, `/terms`, and a missing route at
+  390 px. The standalone Axe CLI could not find a system Chrome binary, so the
+  equivalent Playwright Axe integration was used.
+- Lighthouse, live mobile: Performance 100, Accessibility 100, Best Practices
+  100, SEO 100; LCP 1,211 ms, CLS 0, transfer 58,635 B. Report:
+  `.factory/evidence/live/lighthouse.json` (ignored test evidence).
 
-## Reproduce
+## Run and deploy
 
 ```sh
 npm ci
-npm run test:e2e -- --grep @claim:pro-price
 npm test
 npm run build
+/opt/fleet/lib/deploy-static.sh lift-receipt-log dist
 ```
 
-During the required claim run and full suite, both of these returned HTTP 503:
+Open `/demo` or `?demo=1` for an isolated sample log. Use **Reset demo** to
+restore sample data and **Start for real** to delete it before opening the real
+logger.
 
-```text
-https://api.sociobot.in/api/v1/products
-https://api.sociobot.in/api/v1/products/lift-receipt-log/checkout
-```
+## Known gaps
 
-A final probe later recovered to catalogue 200 and checkout 303. The observed
-intermittent failure remains blocking under the claims review rule.
-
-## Next step
-
-Repair every finding in `.factory/review-1.md`, deploy the candidate and
-checkout dependency, then rerun the full review from a fresh browser context.
+None. The checkout test verifies the live catalogue price and hosted redirect;
+no production payment was submitted.
