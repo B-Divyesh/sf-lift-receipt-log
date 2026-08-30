@@ -291,8 +291,8 @@ test('@claim:no-training-advice provides record keeping without prescriptive tra
 test('@claim:pro-price shows the one-time price and Sociobot checkout', async ({ page }) => {
   let available = false;
   await page.route('**/api/v1/products', async (route) => {
-    if (!available) return route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' });
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [{
+    if (!available) return route.fulfill({ status: 503, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: '{"error":"unavailable"}' });
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ data: [{
       slug: 'lift-receipt-log',
       price_minor: 900,
       checkout_url: 'https://api.sociobot.in/api/v1/products/lift-receipt-log/checkout',
@@ -312,6 +312,7 @@ test('@claim:pro-features verifies once, enables custom rest, and persists priva
   await page.route('**/api/v1/products', async (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
+    headers: { 'Access-Control-Allow-Origin': '*' },
     body: JSON.stringify({ data: [{
       slug: 'lift-receipt-log',
       price_minor: 900,
