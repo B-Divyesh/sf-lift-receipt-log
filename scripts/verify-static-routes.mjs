@@ -7,7 +7,7 @@ if (override?.rewrite !== '/404.html' || override.statusCode !== 404) {
 }
 
 const page = await readFile(new URL('../public/404.html', import.meta.url), 'utf8');
-for (const expected of ['<html lang="en">', '<main id="main"', '<h1>That page is not in your log.</h1>', '<title>Page not found — Set Receipt</title>', 'href="/"']) {
+for (const expected of ['<html lang="en">', '<main id="main"', '<h1>That page is not in your log.</h1>', '<title>Page not found — Set Receipt</title>', 'href="/"', 'property="og:title"', 'property="og:image"', 'name="twitter:card"', 'name="twitter:image"']) {
   if (!page.includes(expected)) throw new Error(`404 page is missing required markup: ${expected}`);
 }
 

@@ -45,6 +45,17 @@ export async function saveData(data: AppData, namespace: StorageNamespace = 'rea
   db.close();
 }
 
+/** Remove the disposable demo store when a visitor leaves sample mode. */
+export async function clearData(namespace: StorageNamespace): Promise<void> {
+  const name = namespace === 'demo' ? `${DB_NAME}-demo` : DB_NAME;
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(name);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error ?? new Error('Could not clear local storage'));
+    request.onblocked = () => reject(new Error('Close other Set Receipt tabs and try again.'));
+  });
+}
+
 export function validateImport(value: unknown): AppData {
   if (!value || typeof value !== 'object') throw new Error('That file is not a Set Receipt backup.');
   const candidate = value as Partial<AppData>;

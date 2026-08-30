@@ -5,5 +5,6 @@
 - Sample: an open three-set bench-press workout, one completed deadlift receipt, a private note, and an `rdl` alias.
 - Storage: demo changes use the separate IndexedDB database `set-receipt-demo`. The real log remains in `set-receipt`; demo mode does not read license storage or call license verification.
 - Reset: choose **Reset demo** in the persistent demo banner.
-- Exit: choose **Start for real**. Demo records are not copied into the real log.
+- Exit: choose **Start for real**. It deletes the demo database before opening
+  the real logger, so a later `/demo` visit starts from the shipped sample.
 - Offline: visit the demo once, wait for service-worker control, then it can be reloaded and edited offline.

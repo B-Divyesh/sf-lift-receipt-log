@@ -1,7 +1,7 @@
 {
   "name": "Set Receipt — Lift Log",
   "short_name": "Set Receipt",
-  "description": "A fast, offline set logger and portable workout receipt.",
+  "description": "Log sets offline and keep portable workout receipts.",
   "id": "/",
   "start_url": "/?v=1",
   "scope": "/",

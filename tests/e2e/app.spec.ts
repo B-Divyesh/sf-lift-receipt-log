@@ -28,24 +28,29 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
-test('@claim:keyboard-receipt logs a set by keyboard and files an immutable receipt', async ({ page }) => {
+test('@claim:keyboard-receipt logs advertised set formats by keyboard and files an immutable receipt', async ({ page }) => {
   await page.getByLabel('Exercise').fill('sq');
   await page.getByLabel('Weight × reps').fill('225x5');
   await page.getByLabel('Weight × reps').press('Enter');
 
-  await expect(page.locator('.set-exercise').getByText('Squat', { exact: true })).toBeVisible();
+  await page.getByLabel('Weight × reps').fill('100x8kg');
+  await page.getByLabel('Weight × reps').press('Enter');
+  await page.getByLabel('Weight × reps').fill('135 × 10');
+  await page.getByLabel('Weight × reps').press('Enter');
+
+  await expect(page.locator('.set-exercise').getByText('Squat', { exact: true }).first()).toBeVisible();
   await expect(page.locator('.set-list').getByText('225lb × 5', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Personal record').first()).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Pause rest timer' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await expect(page.getByRole('heading', { name: 'Workout receipt' })).toBeVisible();
-  await expect(page.locator('.totals div').first().getByText('1', { exact: true })).toBeVisible();
+  await expect(page.locator('.totals div').first().getByText('3', { exact: true })).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Log the set. Keep the proof.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Log sets. Keep a workout receipt.' })).toBeVisible();
   await page.getByRole('button', { name: 'Receipts' }).click();
-  await expect(page.getByRole('button', { name: /1 sets/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /3 sets/ })).toBeVisible();
 });
 
 test('keeps the active exercise for consecutive keyboard entries', async ({ page }) => {
@@ -65,6 +70,25 @@ test('keeps the active exercise for consecutive keyboard entries', async ({ page
   await expect(page.locator('.set-row')).toHaveCount(2);
   await expect(page.locator('#entry-error')).toBeEmpty();
   await expect(setExpression).toBeFocused();
+});
+
+test('@claim:free-core keeps logging, fixed timers, aliases, receipts, and export available without Pro', async ({ page }) => {
+  await expect(page.evaluate(() => localStorage.getItem('sb_license:lift-receipt-log'))).resolves.toBeNull();
+  await page.getByRole('button', { name: 'Setup' }).click();
+  await page.locator('#rest-select').selectOption('180');
+  await page.getByLabel('Short code').fill('rdl');
+  await page.getByLabel('Exercise', { exact: true }).fill('Romanian deadlift');
+  await page.getByRole('button', { name: 'Add alias' }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export CSV' }).click();
+  await download;
+  await page.getByRole('button', { name: 'Log' }).click();
+  await page.getByLabel('Exercise').fill('rdl');
+  await page.getByLabel('Weight × reps').fill('185x6');
+  await page.getByLabel('Weight × reps').press('Enter');
+  await expect(page.getByRole('button', { name: 'Pause rest timer' })).toBeVisible();
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout receipt' })).toBeVisible();
 });
 
 test('@claim:editable-aliases shows helpful validation and aliases remain editable', async ({ page }) => {
@@ -192,7 +216,7 @@ test('@claim:data-portability @claim:receipt-share successful recovery actions r
   await expect(page.locator('.toast')).toHaveText('Backup imported.');
 });
 
-test('@claim:demo-sandbox sample data is one click away and isolated from the real log', async ({ page }) => {
+test('@claim:demo-sandbox sample data is one click away, visible, isolated, and discarded on exit', async ({ page }, testInfo) => {
   await page.getByLabel('Exercise').fill('sq');
   await page.getByLabel('Weight × reps').fill('225x5');
   await page.getByLabel('Weight × reps').press('Enter');
@@ -202,18 +226,22 @@ test('@claim:demo-sandbox sample data is one click away and isolated from the re
   await expect(page.getByText('Demo — sample data, nothing is saved to your log')).toBeVisible();
   await expect(page.locator('.set-row')).toHaveCount(3);
   await expect(page.getByText('195lb × 5', { exact: true })).toBeVisible();
+  const firstSample = page.locator('.set-row').first();
+  const box = await firstSample.boundingBox();
+  expect(box, 'the first sample set should be rendered').not.toBeNull();
+  expect(box!.y).toBeLessThan(844);
+  if (testInfo.project.name === 'mobile') await page.screenshot({ path: 'test-results/evidence/mobile-demo-first-screen.png' });
 
   await page.getByRole('button', { name: 'Remove Bench press set' }).first().click();
   await expect(page.locator('.set-row')).toHaveCount(2);
-  await page.getByRole('button', { name: 'Reset demo' }).click();
-  await expect(page.locator('.set-row')).toHaveCount(3);
-  await expect(page.locator('.toast')).toHaveText('Demo reset to sample data.');
-
-  await page.getByRole('link', { name: 'Start for real' }).click();
+  await page.getByRole('button', { name: 'Start for real' }).click();
   await expect(page).toHaveURL('http://127.0.0.1:4173/');
   await expect(page.getByText('Demo — sample data, nothing is saved to your log')).toHaveCount(0);
   await expect(page.locator('.set-row')).toHaveCount(1);
   await expect(page.locator('.set-exercise').getByText('Squat', { exact: true })).toBeVisible();
+  await page.goto('/demo');
+  await expect(page.locator('.set-row')).toHaveCount(3);
+  await expect(page.getByText('195lb × 5', { exact: true })).toBeVisible();
 });
 
 test('@claim:local-private ordinary demo logging sends requests only to this site', async ({ page }) => {
@@ -226,6 +254,15 @@ test('@claim:local-private ordinary demo logging sends requests only to this sit
   await page.getByRole('button', { name: 'Setup' }).click();
   await page.getByLabel('Kilograms (kg)').check();
   expect(requests.length).toBeGreaterThan(0);
+  expect(requests.filter((url) => new URL(url).origin !== 'http://127.0.0.1:4173')).toEqual([]);
+});
+
+test('@claim:no-third-party-assets loads no analytics, ads, external fonts, or third-party scripts', async ({ page }) => {
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+  for (const path of ['/', '/demo', '/privacy', '/terms', '/not-a-real-route']) {
+    await page.goto(path);
+  }
   expect(requests.filter((url) => new URL(url).origin !== 'http://127.0.0.1:4173')).toEqual([]);
 });
 
@@ -320,7 +357,19 @@ test('serves a styled 404 response with a working route back to the logger', asy
   await expect(page.getByRole('link', { name: 'Open the logger' })).toBeVisible();
   await page.getByRole('link', { name: 'Open the logger' }).click();
   await expect(page).toHaveURL('http://127.0.0.1:4173/');
-  await expect(page.getByRole('heading', { name: 'Log the set. Keep the proof.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Log sets. Keep a workout receipt.' })).toBeVisible();
+});
+
+test('moves focus and announces the route heading for navigation, Back, Forward, and deep links', async ({ page }) => {
+  await page.locator('footer').getByRole('link', { name: 'Privacy' }).click();
+  await expect(page.getByRole('heading', { name: 'Privacy' })).toBeFocused();
+  await expect(page.locator('.route-announcement')).toHaveText('Privacy page');
+  await page.goBack();
+  await expect(page.getByRole('heading', { name: 'Log sets. Keep a workout receipt.' })).toBeFocused();
+  await page.goForward();
+  await expect(page.getByRole('heading', { name: 'Privacy' })).toBeFocused();
+  await page.goto('/terms');
+  await expect(page.getByRole('heading', { name: 'Terms' })).toHaveAttribute('tabindex', '-1');
 });
 
 test('has no serious accessibility violations on core and legal screens', async ({ page }) => {
@@ -339,6 +388,8 @@ test('keyboard-only flow uses the skip link and logs a set', async ({ page }) =>
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to workout' })).toBeFocused();
   await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Try it with sample data' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByLabel('Exercise')).toBeFocused();
   await page.keyboard.type('sq');
@@ -415,6 +466,18 @@ test('mobile viewport has no horizontal page overflow', async ({ page }, testInf
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.getByRole('button', { name: /Log set/ })).toBeVisible();
+});
+
+test('mobile first screen exposes the sample action and its outcome before the fold', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Mobile-only first-screen assertion');
+  const action = page.getByRole('link', { name: 'Try it with sample data' });
+  const actionBox = await action.boundingBox();
+  const outcomeBox = await page.getByText('Loads a separate sample log.').boundingBox();
+  expect(actionBox).not.toBeNull();
+  expect(outcomeBox).not.toBeNull();
+  expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(844);
+  expect(outcomeBox!.y + outcomeBox!.height).toBeLessThanOrEqual(844);
+  await page.screenshot({ path: 'test-results/evidence/mobile-first-screen.png' });
 });
 
 test('mobile targets and navigation spacing pass in every reported state', async ({ page }, testInfo) => {

@@ -1,79 +1,15 @@
 [
-  {
-    "id": "keyboard-receipt",
-    "claim": "A keyboard entry logs a set, starts the rest clock, and files a completed workout receipt.",
-    "where": "logger and README",
-    "test": "npm run test:e2e -- --grep @claim:keyboard-receipt",
-    "sandbox": "fresh browser storage; enter sq and 225x5; assert the set, running timer, completed receipt, and persisted history"
-  },
-  {
-    "id": "editable-aliases",
-    "claim": "Exercise aliases can be added and used when logging.",
-    "where": "Setup and README",
-    "test": "npm run test:e2e -- --grep @claim:editable-aliases",
-    "sandbox": "fresh browser storage; add rdl for Romanian deadlift and log a set through that alias"
-  },
-  {
-    "id": "data-portability",
-    "claim": "The log exports JSON and CSV and restores a compatible JSON backup.",
-    "where": "Setup, privacy page, and README",
-    "test": "npm run test:e2e -- --grep @claim:data-portability",
-    "sandbox": "fresh browser storage; inspect generated JSON and CSV, reject malformed JSON, then import a valid backup"
-  },
-  {
-    "id": "receipt-share",
-    "claim": "A completed receipt can be copied as readable text.",
-    "where": "receipt view and README",
-    "test": "npm run test:e2e -- --grep @claim:receipt-share",
-    "sandbox": "fresh browser storage and granted clipboard permission; finish one workout and assert the copied receipt text"
-  },
-  {
-    "id": "print-receipt",
-    "claim": "A completed receipt has a clean print or PDF view.",
-    "where": "receipt view and README",
-    "test": "npm run test:e2e -- --grep @claim:print-receipt",
-    "sandbox": "fresh browser storage; finish one workout, invoke print, emulate print media, and assert receipt-only output"
-  },
-  {
-    "id": "erase-local-data",
-    "claim": "Erase all local data removes workouts and custom aliases and restores default settings.",
-    "where": "Setup and privacy page",
-    "test": "npm run test:e2e -- --grep @claim:erase-local-data",
-    "sandbox": "fresh browser storage; create data and non-default settings, erase, reload, and assert all defaults"
-  },
-  {
-    "id": "demo-sandbox",
-    "claim": "The sample demo uses storage separate from the real workout log.",
-    "where": "logger demo action and demo banner",
-    "test": "npm run test:e2e -- --grep @claim:demo-sandbox",
-    "sandbox": "fresh browser context; create a real set, enter and reset /demo, then return and assert the real set is unchanged"
-  },
-  {
-    "id": "local-private",
-    "claim": "Workout data stays on this device during ordinary logging, with no analytics or tracking requests.",
-    "where": "logger facts, footer, privacy page, and README",
-    "test": "npm run test:e2e -- --grep @claim:local-private",
-    "sandbox": "fresh demo flow with every request recorded; log and change settings; assert every request is same-origin"
-  },
-  {
-    "id": "offline-reload",
-    "claim": "The logger works offline after the first visit.",
-    "where": "logger facts, manifest description, and README",
-    "test": "npm run test:e2e -- --grep @claim:offline-reload",
-    "sandbox": "dedicated fresh browser context at /demo; wait for service-worker control, go offline, reload, log, and reload again"
-  },
-  {
-    "id": "pro-price",
-    "claim": "Pro costs $9 once through the hosted Sociobot checkout.",
-    "where": "Setup, terms page, and README",
-    "test": "npm run test:e2e -- --grep @claim:pro-price",
-    "sandbox": "fresh browser storage; assert the displayed price and exact Sociobot checkout URL"
-  },
-  {
-    "id": "pro-features",
-    "claim": "A valid Pro license enables custom rest intervals and private receipt notes and is checked at most daily.",
-    "where": "Setup, receipt view, privacy page, and README",
-    "test": "npm run test:e2e -- --grep @claim:pro-features",
-    "sandbox": "mocked valid Sociobot response; capture a license, set a custom rest, persist a private note, reload, and assert one verification request"
-  }
+  {"id":"keyboard-receipt","claim":"Keyboard entry accepts 225x5, 100x8kg, and 135 × 10, starts a rest timer, and files a workout receipt.","where":"logger and README","test":"npm run test:e2e -- --grep @claim:keyboard-receipt","sandbox":"fresh browser storage; log all three public formats, finish the workout, and reload its receipt"},
+  {"id":"editable-aliases","claim":"Exercise aliases can be added and used when logging.","where":"Setup and README","test":"npm run test:e2e -- --grep @claim:editable-aliases","sandbox":"fresh browser storage; add rdl for Romanian deadlift and log through that alias"},
+  {"id":"free-core","claim":"Logging, fixed rest timers, aliases, receipts, and export work without a Pro license.","where":"landing and README","test":"npm run test:e2e -- --grep @claim:free-core","sandbox":"fresh unlicensed browser storage; set a fixed timer, add an alias, export CSV, log, and finish a receipt"},
+  {"id":"data-portability","claim":"The log exports JSON and CSV and restores a compatible JSON backup.","where":"Setup, privacy page, and README","test":"npm run test:e2e -- --grep @claim:data-portability","sandbox":"fresh browser storage; inspect exports, reject malformed JSON, then import a valid backup"},
+  {"id":"receipt-share","claim":"A completed receipt can be copied as readable text.","where":"receipt view and README","test":"npm run test:e2e -- --grep @claim:receipt-share","sandbox":"fresh browser storage with clipboard permission; finish one workout and read copied receipt text"},
+  {"id":"print-receipt","claim":"A completed receipt has a clean print or PDF view.","where":"receipt view and README","test":"npm run test:e2e -- --grep @claim:print-receipt","sandbox":"fresh browser storage; finish a workout, invoke print, emulate print media, and assert receipt-only output"},
+  {"id":"erase-local-data","claim":"Erase all local data removes workouts and custom aliases and restores default settings.","where":"Setup and privacy page","test":"npm run test:e2e -- --grep @claim:erase-local-data","sandbox":"fresh browser storage; create data and non-default settings, erase, reload, and assert defaults"},
+  {"id":"demo-sandbox","claim":"The sample demo is separate from the real workout log, shows a sample set immediately, and discards edits on exit.","where":"logger demo action, banner, README, and demo guide","test":"npm run test:e2e -- --grep @claim:demo-sandbox","sandbox":"fresh browser storage; make a real set, edit demo data, exit, re-enter, and assert the seed sample and real set"},
+  {"id":"local-private","claim":"Ordinary demo logging sends requests only to this site.","where":"privacy page and README","test":"npm run test:e2e -- --grep @claim:local-private","sandbox":"fresh demo flow with every request recorded; log and change settings; assert every request is same-origin"},
+  {"id":"no-third-party-assets","claim":"The app loads no analytics, ads, external fonts, or third-party scripts.","where":"README","test":"npm run test:e2e -- --grep @claim:no-third-party-assets","sandbox":"fresh browser visits every public route with all requests recorded; assert every request is same-origin"},
+  {"id":"offline-reload","claim":"The logger works offline after the first visit.","where":"logger facts, manifest description, and README","test":"npm run test:e2e -- --grep @claim:offline-reload","sandbox":"dedicated fresh browser context at /demo; wait for service-worker control, go offline, reload, log, and reload again"},
+  {"id":"pro-price","claim":"Pro costs $9 once through Sociobot checkout.","where":"landing, Setup, terms page, and README","test":"npm run test:e2e -- --grep @claim:pro-price","sandbox":"fresh browser storage; assert $9, the exact checkout URL, catalogue price, and checkout redirect"},
+  {"id":"pro-features","claim":"A valid Pro license enables custom rest intervals and private receipt notes and is checked at most daily.","where":"Setup, privacy page, and README","test":"npm run test:e2e -- --grep @claim:pro-features","sandbox":"mocked valid Sociobot response; capture a license, set custom rest, persist a note, reload, and assert one verification request"}
 ]

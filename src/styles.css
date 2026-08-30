@@ -43,6 +43,8 @@ a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px
 .demo-banner div { display: flex; align-items: center; gap: 12px; }
 .demo-banner button { border: 2px solid #171814; background: transparent; color: #171814; padding: 8px 12px; font-weight: 800; }
 .demo-banner a { color: #10286b; font-weight: 800; }
+.demo-banner button:last-child { background: #171814; color: #fff5cc; }
+.route-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 main { min-height: 65vh; }
 .log-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .65fr); gap: clamp(24px, 5vw, 72px); max-width: 1480px; margin: 0 auto; padding: clamp(32px, 6vw, 80px) clamp(16px, 4vw, 56px) 72px; }
@@ -71,6 +73,7 @@ h2 { margin: 0; font: 900 clamp(1.35rem, 3vw, 2rem)/1 "Arial Black", Arial, sans
 .form-error:not(:empty) { color: var(--danger); font-weight: 800; }
 
 .active-sheet { margin-top: 48px; background: var(--surface); border: var(--rule); box-shadow: var(--shadow); }
+.demo-banner + .log-layout .active-sheet { margin-top: 20px; }
 .sheet-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px; border-bottom: var(--rule); }
 .set-count { flex: none; border: 2px solid var(--plate); padding: 5px 8px; color: var(--plate); font: 800 12px ui-monospace, monospace; transform: rotate(2deg); }
 .set-list { margin: 0; padding: 0; list-style: none; }
@@ -102,6 +105,16 @@ h2 { margin: 0; font: 900 clamp(1.35rem, 3vw, 2rem)/1 "Arial Black", Arial, sans
 .syntax-card dl div { display: grid; grid-template-columns: 80px 1fr; border-top: 1px solid var(--ink); padding: 10px 0; }
 .syntax-card dt { font: 800 14px ui-monospace, monospace; }
 .syntax-card dd { margin: 0; color: var(--muted); }
+.landing-sections { display: grid; gap: 24px; margin-top: 64px; }
+.landing-sections > section { border-top: 3px solid var(--ink); padding: 24px 0 0; }
+.landing-sections h2 { max-width: 22ch; }
+.landing-sections p, .landing-sections ol { max-width: 62ch; }
+.landing-sections ol { display: grid; gap: 12px; margin: 20px 0 0; padding-left: 24px; }
+.landing-sections li::marker { color: var(--plate); font-weight: 900; }
+.landing-pro { background: #171814; color: #fffdf4; border: 3px solid #171814 !important; box-shadow: var(--shadow); padding: 24px !important; }
+.landing-pro .eyebrow { color: #ffb15f; }
+.landing-pro .primary-button { margin-top: 8px; }
+.landing-pro a:not(.primary-button) { color: #fffdf4; }
 
 .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; max-width: 1200px; margin: 0 auto 40px; }
 .page-heading h1, .legal h1 { font-size: clamp(2.6rem, 7vw, 5.2rem); }
@@ -192,7 +205,6 @@ footer nav { display: flex; gap: 18px; }
 
 @media (max-width: 860px) {
   .log-layout { grid-template-columns: 1fr; }
-  .utility-rail { grid-row: 1; }
   .rest-block { position: static; }
   .empty-illustration, .syntax-card { display: none; }
   .settings-grid { grid-template-columns: 1fr; }
@@ -207,7 +219,7 @@ footer nav { display: flex; gap: 18px; }
   .nav-button { min-width: 0; padding-inline: 9px; font-size: 14px; }
   .network-status { padding-inline: 12px; }
   .demo-banner { align-items: flex-start; flex-direction: column; padding-inline: 12px; }
-  .log-layout { padding: 30px 12px 64px; gap: 24px; }
+  .log-layout { padding: 20px 12px 64px; gap: 24px; }
   h1 { font-size: clamp(2.75rem, 14vw, 4.2rem); }
   .entry-docket { grid-template-columns: 1fr 1fr; box-shadow: 5px 5px 0 var(--ink); }
   .entry-docket .primary-button { grid-column: 1/-1; min-height: 56px; border-top: var(--rule); }
@@ -216,6 +228,10 @@ footer nav { display: flex; gap: 18px; }
   .set-row .icon-button { grid-column: 3; grid-row: 1; }
   .set-row .pr-stamp { grid-column: 3; grid-row: 2; }
   .sheet-actions { align-items: flex-end; }
+  .demo-entry { margin: 16px 0 20px; }
+  .hero-facts { margin: 0 0 20px; }
+  .demo-banner + .log-layout .active-sheet { margin: 14px 0 18px; }
+  .demo-banner + .log-layout .active-sheet .set-row:nth-child(n+3) { display: none; }
   .page-heading { align-items: flex-start; }
   .big-count { display: none; }
   .history-page, .settings-page { padding: 36px 12px 64px; }
