@@ -1,11 +1,13 @@
 {
   "name": "lift-receipt-log",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/build-sw.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit --noUnusedLocals --noUnusedParameters --noFallthroughCasesInSwitch",
     "test": "vitest run && npm run test:static && playwright test",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",

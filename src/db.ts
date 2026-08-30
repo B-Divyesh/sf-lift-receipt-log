@@ -21,17 +21,21 @@ async function openDb(namespace: StorageNamespace): Promise<IDBDatabase> {
   });
 }
 
-export async function loadData(namespace: StorageNamespace = 'real'): Promise<AppData> {
-  const db = await openDb(namespace);
-  const tx = db.transaction(STORE, 'readonly');
-  const saved = await request(tx.objectStore(STORE).get(KEY)) as AppData | undefined;
-  db.close();
+function withDefaults(saved?: AppData): AppData {
   if (!saved) return structuredClone(DEFAULT_DATA);
   return {
     ...structuredClone(DEFAULT_DATA),
     ...saved,
     settings: { ...DEFAULT_DATA.settings, ...saved.settings },
   };
+}
+
+export async function loadData(namespace: StorageNamespace = 'real'): Promise<AppData> {
+  const db = await openDb(namespace);
+  const tx = db.transaction(STORE, 'readonly');
+  const saved = await request(tx.objectStore(STORE).get(KEY)) as AppData | undefined;
+  db.close();
+  return withDefaults(saved);
 }
 
 export async function saveData(data: AppData, namespace: StorageNamespace = 'real'): Promise<void> {
@@ -43,6 +47,42 @@ export async function saveData(data: AppData, namespace: StorageNamespace = 'rea
     tx.onerror = () => reject(tx.error ?? new Error('Could not save locally'));
   });
   db.close();
+}
+
+/**
+ * Apply one user action to the newest stored document inside a single
+ * IndexedDB transaction. Read-modify-write transactions are serialized by the
+ * object store, so a tab that opened earlier cannot overwrite a later tab's
+ * sets with its stale in-memory snapshot.
+ */
+export async function updateData(change: (latest: AppData) => void, namespace: StorageNamespace = 'real'): Promise<AppData> {
+  const db = await openDb(namespace);
+  let updated: AppData | undefined;
+  try {
+    updated = await new Promise<AppData>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      const get = store.get(KEY);
+
+      get.onsuccess = () => {
+        try {
+          updated = withDefaults(get.result as AppData | undefined);
+          change(updated);
+          store.put(updated, KEY);
+        } catch (cause) {
+          tx.abort();
+          reject(cause);
+        }
+      };
+      get.onerror = () => reject(get.error ?? new Error('Could not read local storage'));
+      tx.oncomplete = () => resolve(updated!);
+      tx.onerror = () => reject(tx.error ?? new Error('Could not save locally'));
+      tx.onabort = () => reject(tx.error ?? new Error('Could not save locally'));
+    });
+    return updated;
+  } finally {
+    db.close();
+  }
 }
 
 /** Remove the disposable demo store when a visitor leaves sample mode. */

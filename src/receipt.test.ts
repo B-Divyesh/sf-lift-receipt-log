@@ -9,8 +9,22 @@ const workout: Workout = {
 
 describe('receipt math and portability', () => {
   it('calculates totals and fixed duration', () => {
-    expect(workoutVolume(workout)).toBe(500);
+    expect(workoutVolume(workout)).toEqual({ label: 'Volume', text: '500 kg·reps' });
     expect(workoutDuration(workout)).toBe(45);
+  });
+
+  it('keeps lb-reps and kg-reps separate in mixed-unit volume', () => {
+    const mixed: Workout = {
+      ...workout,
+      sets: [
+        { ...workout.sets[0], id: 'lb-a', weight: 2000, reps: 999, unit: 'lb' },
+        { ...workout.sets[0], id: 'kg-a', weight: 100, reps: 8, unit: 'kg' },
+        { ...workout.sets[0], id: 'lb-b', weight: 135, reps: 10, unit: 'lb' },
+      ],
+    };
+
+    expect(workoutVolume(mixed)).toEqual({ label: 'Volume by unit', text: '1,999,350 lb·reps + 800 kg·reps' });
+    expect(receiptText(mixed)).not.toContain('2,000,150');
   });
 
   it('creates readable text and CSV', () => {

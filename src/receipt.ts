@@ -1,7 +1,20 @@
 import type { LiftSet, Workout } from './types';
 
-export function workoutVolume(workout: Workout): number {
-  return workout.sets.reduce((sum, set) => sum + set.weight * set.reps, 0);
+export interface VolumeSummary {
+  label: 'Volume' | 'Volume by unit';
+  text: string;
+}
+
+export function workoutVolume(workout: Workout): VolumeSummary {
+  const totals = new Map<LiftSet['unit'], number>();
+  for (const set of workout.sets) totals.set(set.unit, (totals.get(set.unit) ?? 0) + set.weight * set.reps);
+  const parts = (['lb', 'kg'] as const)
+    .filter((unit) => totals.has(unit))
+    .map((unit) => `${totals.get(unit)!.toLocaleString()} ${unit}·reps`);
+  return {
+    label: parts.length > 1 ? 'Volume by unit' : 'Volume',
+    text: parts.join(' + ') || '0',
+  };
 }
 
 export function workoutDuration(workout: Workout, now = Date.now()): number {
@@ -17,13 +30,14 @@ export function formatDuration(minutes: number): string {
 export function receiptText(workout: Workout): string {
   const date = new Date(workout.startedAt).toLocaleDateString(undefined, { dateStyle: 'medium' });
   const lines = workout.sets.map((set) => `${set.exercise}: ${set.weight}${set.unit} × ${set.reps}${set.isPr ? ' ★ PR' : ''}`);
+  const volume = workoutVolume(workout);
   return [
     'SET RECEIPT',
     date,
     '—',
     ...lines,
     '—',
-    `${workout.sets.length} sets · ${workoutVolume(workout).toLocaleString()} volume · ${formatDuration(workoutDuration(workout))}`,
+    `${workout.sets.length} sets · ${volume.label}: ${volume.text} · ${formatDuration(workoutDuration(workout))}`,
     workout.note ? `Note: ${workout.note}` : '',
     'Logged locally with Set Receipt',
   ].filter(Boolean).join('\n');

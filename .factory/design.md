@@ -34,7 +34,7 @@ stays prominent, and secondary copy disappears before controls shrink.
 
 The entry line is the product: select/type an exercise, enter `225x5`, press
 Enter. A successful set lands as a newly printed receipt row and starts the rest
-clock. Buttons depress by their 4 px shadow offset; new rows slide down 6 px over
+timer. At completion, the timer stops on a stable `DONE` docket state. Buttons depress by their 4 px shadow offset; new rows slide down 6 px over
 180 ms; dialogs originate near the invoking control. Status is always expressed
 with a label or symbol as well as color. Under `prefers-reduced-motion`, all
 movement and smooth scrolling become instant opacity/state changes. Nothing

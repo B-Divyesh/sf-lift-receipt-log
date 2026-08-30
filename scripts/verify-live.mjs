@@ -14,6 +14,14 @@ const context = await browser.newContext({
   viewport: { width: 390, height: 844 },
 });
 const page = await context.newPage();
+if (new URL(origin).hostname === '127.0.0.1' || new URL(origin).hostname === 'localhost') {
+  await page.route('https://api.sociobot.in/api/v1/products', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    body: '{"data":[]}',
+  }));
+}
 let seriousAxeViolations = 0;
 let demoExternalRequests = [];
 page.on('pageerror', (error) => errors.push(String(error)));
@@ -90,12 +98,24 @@ try {
     if (path === '/?view=settings') {
       await page.locator('a:has-text("Buy Pro"), button:has-text("Checkout unavailable")').first().waitFor();
     }
+    if (path === '/terms') {
+      assert.match(await page.locator('main').innerText(), /Sociobot\/Dodo is the merchant of record/);
+      assert.match(await page.locator('main').innerText(), /Refunds are handled there and automatically revoke the Pro license/);
+    }
     const axe = await new AxeBuilder({ page }).analyze();
     seriousAxeViolations += axe.violations.filter((item) => ['serious', 'critical'].includes(item.impact ?? '')).length;
     renderedCopy.push(await page.locator('body').innerText());
   }
 
   await page.goto(`${origin}/`);
+  await page.getByRole('heading', { name: 'Log sets. Keep a workout receipt.' }).waitFor();
+  await page.keyboard.press('Tab');
+  assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), 'Skip to workout');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.activeElement?.id === 'main');
+  assert.equal(await page.evaluate(() => document.activeElement?.id), 'main');
+  assert.match(page.url(), /#main$/);
+
   await page.locator('footer').getByRole('link', { name: 'Privacy' }).click();
   assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Privacy');
   await page.goBack();
@@ -138,7 +158,88 @@ try {
   await offlinePage.screenshot({ path: `${evidenceDir}/cold-mobile-offline.png` });
 } finally {
   await offlineContext.close();
+}
+
+const tabsContext = await browser.newContext();
+try {
+  const firstTab = await tabsContext.newPage();
+  const secondTab = await tabsContext.newPage();
+  await Promise.all([firstTab.goto(`${origin}/`), secondTab.goto(`${origin}/`)]);
+  await firstTab.getByLabel('Exercise').fill('Squat');
+  await firstTab.getByLabel('Weight × reps').fill('225x5');
+  await firstTab.getByLabel('Weight × reps').press('Enter');
+  await secondTab.getByLabel('Exercise').fill('Bench press');
+  await secondTab.getByLabel('Weight × reps').fill('185x5');
+  await secondTab.getByLabel('Weight × reps').press('Enter');
+  await firstTab.reload();
+  assert.equal(await firstTab.locator('.set-row').count(), 2);
+} finally {
+  await tabsContext.close();
+}
+
+const volumeContext = await browser.newContext();
+try {
+  const volumePage = await volumeContext.newPage();
+  await volumePage.goto(`${origin}/`);
+  await volumePage.getByLabel('Exercise').fill('Squat');
+  for (const expression of ['2000x999', '100x8kg', '135 × 10']) {
+    await volumePage.getByLabel('Weight × reps').fill(expression);
+    await volumePage.getByLabel('Weight × reps').press('Enter');
+  }
+  await volumePage.getByRole('button', { name: 'Finish workout' }).click();
+  assert.match(await volumePage.locator('.totals').innerText(), /Volume by unit\s+1,999,350 lb·reps \+ 800 kg·reps/i);
+  assert.doesNotMatch(await volumePage.locator('.totals').innerText(), /2,000,150/);
+} finally {
+  await volumeContext.close();
+}
+
+const timerContext = await browser.newContext();
+try {
+  const timerPage = await timerContext.newPage();
+  await timerPage.goto(`${origin}/`);
+  await timerPage.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('set-receipt', 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('documents', 'readwrite');
+      tx.objectStore('documents').put({ version: 1, workouts: [], aliases: [], settings: { unit: 'lb', restSeconds: 1, theme: 'auto' } }, 'app-data');
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await timerPage.reload();
+  await timerPage.getByLabel('Exercise').fill('Squat');
+  await timerPage.getByLabel('Weight × reps').fill('225x5');
+  await timerPage.getByLabel('Weight × reps').press('Enter');
+  await timerPage.locator('#rest-time').getByText('DONE', { exact: true }).waitFor({ timeout: 3_000 });
+  await timerPage.waitForTimeout(500);
+  assert.equal(await timerPage.locator('#rest-time').textContent(), 'DONE');
+  assert.equal(await timerPage.getByRole('button', { name: 'Start rest timer' }).count(), 1);
+  assert.equal(await timerPage.locator('.toast').textContent(), 'Rest complete. Ready for the next set.');
+} finally {
+  await timerContext.close();
+}
+
+const licenseContext = await browser.newContext();
+try {
+  const licensePage = await licenseContext.newPage();
+  await licensePage.goto(`${origin}/`);
+  await licensePage.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await licensePage.reload();
+  await licensePage.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  await licenseContext.setOffline(true);
+  await licensePage.goto(`${origin}/?license=live-never-verified-token`);
+  await licensePage.getByRole('button', { name: 'Setup' }).click();
+  assert.equal(await licensePage.getByText('Pro is active in this browser.').count(), 0);
+  assert.equal(await licensePage.locator('#custom-rest').count(), 0);
+  assert.equal(await licensePage.evaluate(() => localStorage.getItem('sb_license:lift-receipt-log:verdict')), null);
+} finally {
+  await licenseContext.close();
   await browser.close();
 }
 
-console.log(JSON.stringify({ origin, routes: 6, demoIsolation: 'pass', offline: 'pass', demoExternalRequests: demoExternalRequests.length, allowedCheckoutChecks: externalRequests.length, consoleErrors: 0, seriousAxeViolations }));
+console.log(JSON.stringify({ origin, routes: 6, demoIsolation: 'pass', offline: 'pass', skipFocus: 'pass', concurrentTabs: 'pass', unitAwareVolume: 'pass', timerCompletion: 'pass', unverifiedOfflineLicense: 'pass', purchaseTerms: 'pass', demoExternalRequests: demoExternalRequests.length, allowedCheckoutChecks: externalRequests.length, consoleErrors: 0, seriousAxeViolations }));

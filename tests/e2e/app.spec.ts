@@ -61,6 +61,39 @@ test('@claim:keyboard-receipt logs advertised set formats by keyboard and keeps 
   await expect(page.getByRole('button', { name: /3 sets/ })).toBeVisible();
 });
 
+test('@claim:unit-aware-volume @regression:mixed-unit-volume reports separate unit totals instead of adding unlike loads', async ({ page }) => {
+  await page.getByLabel('Exercise').fill('Squat');
+  for (const expression of ['2000x999', '100x8kg', '135 × 10']) {
+    await page.getByLabel('Weight × reps').fill(expression);
+    await page.getByLabel('Weight × reps').press('Enter');
+  }
+
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  const totals = page.locator('.totals');
+  await expect(totals.getByText('Volume by unit', { exact: true })).toBeVisible();
+  await expect(totals.getByText('1,999,350 lb·reps + 800 kg·reps', { exact: true })).toBeVisible();
+  await expect(totals).not.toContainText('2,000,150');
+});
+
+test('@claim:tab-safe-logging @regression:concurrent-tabs merges sets logged from stale tabs', async ({ page, context }) => {
+  const secondTab = await context.newPage();
+  await secondTab.goto('/');
+
+  await page.getByLabel('Exercise').fill('Squat');
+  await page.getByLabel('Weight × reps').fill('225x5');
+  await page.getByLabel('Weight × reps').press('Enter');
+
+  await secondTab.getByLabel('Exercise').fill('Bench press');
+  await secondTab.getByLabel('Weight × reps').fill('185x5');
+  await secondTab.getByLabel('Weight × reps').press('Enter');
+
+  await page.reload();
+  await expect(page.locator('.set-row')).toHaveCount(2);
+  await expect(page.locator('.set-exercise').getByText('Squat', { exact: true })).toBeVisible();
+  await expect(page.locator('.set-exercise').getByText('Bench press', { exact: true })).toBeVisible();
+  await secondTab.close();
+});
+
 test('keeps the active exercise for consecutive keyboard entries', async ({ page }) => {
   const exercise = page.getByLabel('Exercise');
   const setExpression = page.getByLabel('Weight × reps');
@@ -373,6 +406,82 @@ test('@claim:pro-features verifies once, enables custom rest, and persists priva
   await expect(page.getByRole('link', { name: 'Buy Pro' })).toBeVisible();
 });
 
+test('@claim:verified-license-only @regression:unverified-offline-license keeps Pro locked until a successful verification, then permits cached offline use', async ({ page, context }) => {
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+
+  await context.setOffline(true);
+  try {
+    await page.goto('/?license=qa-never-verified-token');
+    await expect(page).toHaveURL('http://127.0.0.1:4173/');
+    await page.getByRole('button', { name: 'Setup' }).click();
+    await expect(page.getByText('Pro is active in this browser.')).toHaveCount(0);
+    await expect(page.locator('#custom-rest')).toHaveCount(0);
+    await page.getByText('Have a license?').click();
+    await expect(page.getByRole('button', { name: 'Verify Pro license' })).toBeVisible();
+    await expect(page.evaluate(() => localStorage.getItem('sb_license:lift-receipt-log:verdict'))).resolves.toBeNull();
+
+    await context.setOffline(false);
+    await page.route('https://api.sociobot.in/api/v1/products/lift-receipt-log/verify**', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ valid: true, reason: 'ok', expires_at: null }),
+    }));
+    await page.reload();
+    await expect(page.getByText('Pro is active in this browser.')).toBeVisible();
+
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page.getByText('Pro is active in this browser.')).toBeVisible();
+  } finally {
+    await context.setOffline(false);
+  }
+});
+
+test('@claim:timer-completion @regression:completed-rest-timer remains done and announces completion', async ({ page }) => {
+  await page.route('https://api.sociobot.in/api/v1/products/lift-receipt-log/verify**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ valid: true, reason: 'ok', expires_at: null }),
+  }));
+  await page.goto('/?license=qa-timer-license');
+  await page.getByRole('button', { name: 'Setup' }).click();
+  await expect(page.getByText('Pro is active in this browser.')).toBeVisible();
+  await page.locator('#custom-rest').fill('15');
+  await page.getByRole('button', { name: 'Save rest time', exact: true }).click();
+  await page.getByRole('button', { name: 'Log' }).click();
+  await page.getByLabel('Exercise').fill('Squat');
+  await page.getByLabel('Weight × reps').fill('225x5');
+  await page.getByLabel('Weight × reps').press('Enter');
+
+  await expect(page.locator('#rest-time')).toHaveText('DONE', { timeout: 17_000 });
+  await page.waitForTimeout(500);
+  await expect(page.locator('#rest-time')).toHaveText('DONE');
+  await expect(page.getByRole('button', { name: 'Start rest timer' })).toBeVisible();
+  await expect(page.locator('.toast')).toHaveText('Rest complete. Ready for the next set.');
+});
+
+test('@claim:purchase-terms @regression:purchase-terms disclose merchant, refunds, and license revocation', async ({ page }) => {
+  await page.goto('/terms');
+  await expect(page.getByText('Sociobot/Dodo is the merchant of record.')).toBeVisible();
+  await expect(page.getByText('Refunds are handled there and automatically revoke the Pro license.')).toBeVisible();
+
+  await page.goto('/?view=settings');
+  await expect(page.getByText(/Sociobot\/Dodo is the merchant of record/)).toBeVisible();
+  await expect(page.getByText(/Refunds are handled there and automatically revoke the Pro license/)).toBeVisible();
+
+  await page.route('https://api.sociobot.in/api/v1/products/lift-receipt-log/verify**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ valid: false, reason: 'revoked', expires_at: null }),
+  }));
+  await page.goto('/?license=qa-refunded-license');
+  await page.getByRole('button', { name: 'Setup' }).click();
+  await expect(page.getByText('Pro is active in this browser.')).toHaveCount(0);
+  await expect(page.locator('#custom-rest')).toHaveCount(0);
+});
+
 test('@claim:print-receipt exposes a print-ready completed receipt', async ({ page }) => {
   await page.getByLabel('Exercise').fill('bp');
   await page.getByLabel('Weight × reps').fill('185x5');
@@ -483,6 +592,8 @@ test('keyboard-only flow uses the skip link and logs a set', async ({ page }) =>
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to workout' })).toBeFocused();
   await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#main$/);
+  await expect(page.locator('#main')).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Try it with sample data' })).toBeFocused();
   await page.keyboard.press('Tab');

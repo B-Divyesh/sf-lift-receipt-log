@@ -25,12 +25,14 @@ banned marketing word. Storage is consistently described as browser-scoped.
 | It does not give training or injury advice. | 8 | `no-training-advice` |
 | Workout data stays in this browser until you export or share it. | 12 | `local-private`, `data-portability`, `receipt-share` |
 | Pro adds custom rest intervals and private notes on finished receipts. | 11 | `pro-features` |
+| Sociobot/Dodo is the merchant of record. | 6 | `purchase-terms` |
+| Refunds are handled there and automatically revoke the Pro license. | 10 | `purchase-terms` |
 | Your workout log still works. | 5 | Checkout outage state |
 | Try checkout again later. | 4 | Checkout outage recovery |
 | Log sets, then finish the workout to save its receipt. | 10 | `keyboard-receipt` |
 | Workout data stays in this browser. | 6 | `local-private` |
 | Pro checks use Sociobot. | 4 | `pro-price`, `pro-features` |
-| Built by Param Factory · v1.0.0 · Generated editorial image. | 8 | Attribution and provenance |
+| Built by Param Factory · v1.0.1 · Generated editorial image. | 8 | Attribution and provenance |
 
 ## Demo, legal, and recovery sentences
 
@@ -42,6 +44,8 @@ banned marketing word. Storage is consistently described as browser-scoped.
 | That page is not in your log. | 7 | Designed 404 test |
 | Use the logger to record a set, or open the sample workout. | 12 | 404 recovery links test |
 | Set Receipt is a personal record-keeping utility, not training, medical, or injury advice. | 13 | `no-training-advice` |
+| Sociobot/Dodo is the merchant of record. | 6 | `purchase-terms` |
+| Refunds are handled there and automatically revoke the Pro license. | 10 | `purchase-terms` |
 
 ## Headings, labels, and actions reviewed in round 2
 
@@ -70,18 +74,24 @@ banned marketing word. Storage is consistently described as browser-scoped.
 | Enter 225x5, then finish the workout to keep a workout receipt. | 11 | `keyboard-receipt` |
 | It opens a sample Bench press workout in separate browser storage and does not change your workout log. | 18 | `demo-sandbox` |
 | Logs weight × reps; 225x5, 100x8kg, and 135 × 10 work. | 9 | `keyboard-receipt` |
+| Reports separate lb-reps and kg-reps totals when a workout mixes units. | 11 | `unit-aware-volume` |
+| Merges sets logged from two open tabs instead of replacing either set. | 12 | `tab-safe-logging` |
 | Expands editable exercise aliases such as sq, bp, dl, and ohp. | 11 | `editable-aliases` |
-| Starts a rest timer after each set. | 7 | `keyboard-receipt` |
+| Starts a rest timer after each set, stops at DONE, and announces completion. | 13 | `keyboard-receipt`, `timer-completion` |
 | Keeps active workouts and finished receipts in this browser’s storage. | 10 | `keyboard-receipt`, `local-private` |
 | Shares plain-text receipts and prints cleanly to paper or PDF. | 10 | `receipt-share`, `print-receipt` |
 | Exports every record as JSON or CSV and restores JSON backups. | 11 | `data-portability` |
 | Reloads and logs offline after the first visit. | 8 | `offline-reload` |
 | The free logger includes aliases, fixed rest presets, receipts, export, and import. | 12 | `free-core`, `data-portability` |
 | A $9 one-time Pro license adds custom rest intervals and private receipt notes through Sociobot checkout. | 16 | `pro-price`, `pro-features` |
+| Sociobot/Dodo is the merchant of record. | 6 | `purchase-terms` |
+| Refunds are handled there and automatically revoke the Pro license. | 10 | `purchase-terms` |
 | Tests cover logging, receipts, backups, aliases, demo isolation, privacy, accessibility, and offline reloads. | 13 | Full test suite |
 | Workout data stays in this browser during ordinary logging. | 9 | `local-private` |
 | The app loads no analytics, ads, external fonts, or third-party scripts. | 11 | `no-third-party-assets` |
 | The browser stores your license token and checks it with api.sociobot.in no more than once a day. | 17 | `pro-features` |
+| A new token enables Pro only after that check succeeds. | 10 | `verified-license-only` |
+| An already verified valid token can keep Pro active offline. | 10 | `verified-license-only` |
 | Opening Setup checks Sociobot checkout availability without sending workout data. | 10 | `pro-price` |
 
 ## Terminology

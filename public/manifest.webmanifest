@@ -3,7 +3,7 @@
   "short_name": "Set Receipt",
   "description": "Log sets offline and keep portable workout receipts.",
   "id": "/",
-  "start_url": "/?v=1",
+  "start_url": "/?v=2",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

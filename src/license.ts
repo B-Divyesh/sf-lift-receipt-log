@@ -4,21 +4,32 @@ const VERDICT_KEY = `${KEY}:verdict`;
 const DAY = 86_400_000;
 export const CHECKOUT_URL = `https://api.sociobot.in/api/v1/products/${SLUG}/checkout`;
 
-interface Verdict { valid: boolean; checkedAt: number }
+interface Verdict { valid: boolean; checkedAt: number; token: string }
+
+function readVerdict(token: string): Verdict | undefined {
+  try {
+    const verdict = JSON.parse(localStorage.getItem(VERDICT_KEY) ?? '') as Partial<Verdict>;
+    if (verdict.token !== token || typeof verdict.valid !== 'boolean' || !Number.isFinite(verdict.checkedAt) || verdict.checkedAt! <= 0) return undefined;
+    return verdict as Verdict;
+  } catch {
+    return undefined;
+  }
+}
 
 export function captureLicense(): void {
   const url = new URL(location.href);
-  const license = url.searchParams.get('license');
+  const license = url.searchParams.get('license')?.trim();
   if (!license) return;
+  const previousToken = localStorage.getItem(KEY);
   localStorage.setItem(KEY, license);
-  localStorage.setItem(VERDICT_KEY, JSON.stringify({ valid: true, checkedAt: 0 }));
+  if (previousToken !== license) localStorage.removeItem(VERDICT_KEY);
   url.searchParams.delete('license');
   history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
 }
 
 export function storeLicense(token: string): void {
   localStorage.setItem(KEY, token.trim());
-  localStorage.setItem(VERDICT_KEY, JSON.stringify({ valid: true, checkedAt: 0 }));
+  localStorage.removeItem(VERDICT_KEY);
 }
 
 export function removeLicense(): void {
@@ -27,23 +38,25 @@ export function removeLicense(): void {
 }
 
 export function cachedUnlock(): boolean {
-  if (!localStorage.getItem(KEY)) return false;
-  try { return JSON.parse(localStorage.getItem(VERDICT_KEY) ?? '').valid === true; } catch { return true; }
+  const token = localStorage.getItem(KEY);
+  return token ? readVerdict(token)?.valid === true : false;
 }
 
 export async function verifyLicense(force = false): Promise<boolean> {
   const token = localStorage.getItem(KEY);
   if (!token) return false;
-  let cached: Verdict | undefined;
-  try { cached = JSON.parse(localStorage.getItem(VERDICT_KEY) ?? ''); } catch { /* verify */ }
+  const cached = readVerdict(token);
   if (!force && cached && Date.now() - cached.checkedAt < DAY) return cached.valid;
   try {
     const response = await fetch(`https://api.sociobot.in/api/v1/products/${SLUG}/verify?license=${encodeURIComponent(token)}`);
     if (!response.ok) throw new Error('Verification unavailable');
     const body = await response.json() as { valid: boolean };
-    localStorage.setItem(VERDICT_KEY, JSON.stringify({ valid: body.valid, checkedAt: Date.now() }));
-    return body.valid;
+    if (typeof body.valid !== 'boolean') throw new Error('Invalid verification response');
+    localStorage.setItem(VERDICT_KEY, JSON.stringify({ valid: body.valid, checkedAt: Date.now(), token }));
+    return body.valid === true;
   } catch {
-    return cached?.valid ?? true;
+    // Offline use is allowed only after this exact token has received a valid
+    // server verdict. A new, malformed, or legacy verdict never grants Pro.
+    return cached?.valid === true;
   }
 }
