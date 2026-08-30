@@ -80,13 +80,18 @@ text and dark button text on the light-blue dark-mode control. The expanded
 root, demo, Receipts, Setup, demo Setup, Privacy, Terms, and 404 in both themes.
 The final live verifier reports zero serious/critical Axe violations.
 
+The final clean-clone claim run also exposed an asynchronous Setup race. A
+checkout health result could redraw the page while an alias was being entered.
+Checkout status now updates only its own live region, and
+`@claim:editable-aliases` proves the form input is preserved.
+
 ## Verification summary
 
 - Clean-clone claim run: all 14 exact commands passed in desktop and mobile
   projects (28 claim executions).
 - Clean-clone `npm test`: 7 unit tests and 51 browser tests passed; 3
   project-specific tests were intentionally skipped.
-- `npm run build`: `dist/` created; initial JS 34.78 kB raw / 11.98 kB gzip;
+- `npm run build`: `dist/` created; initial JS 35.05 kB raw / 12.03 kB gzip;
   CSS 18.80 kB raw / 4.88 kB gzip.
 - Mobile Lighthouse on `/?demo=1`: Performance 100, Accessibility 100, Best
   Practices 100, SEO 100; LCP 1.4 s, CLS 0, TBT 0 ms.

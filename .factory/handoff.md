@@ -30,6 +30,8 @@ One-click demo: <https://lift-receipt-log.sociobot.in/?demo=1>
 - Added a fail-soft checkout availability check. Setup shows Buy Pro only after
   validating the registered 900-cent product; service outages show a disabled
   checkout state with a retry action while the free logger keeps working.
+- Scoped checkout status updates to their own live region so an asynchronous
+  response cannot erase alias or settings input.
 - Added `npm run verify:live` for repeatable cold production checks covering
   first-screen geometry, demo isolation, focus, routing, metadata, privacy,
   offline use, console errors, and serious/critical Axe findings.
@@ -46,7 +48,7 @@ One-click demo: <https://lift-receipt-log.sociobot.in/?demo=1>
   passed; 51 Playwright tests passed with 3 expected project-specific skips.
 - Final local `npm test`: the expanded accessibility matrix passed after the
   contrast repair.
-- Final `npm run build`: `dist/` produced; initial JS 34.78 kB raw / 11.98 kB
+- Final `npm run build`: `dist/` produced; initial JS 35.05 kB raw / 12.03 kB
   gzip and CSS 18.80 kB raw / 4.88 kB gzip.
 - Local URL verifier: HTTP 200, no console errors, `lang=en`, one H1, one main,
   no missing image alt, and no unlabeled buttons.
