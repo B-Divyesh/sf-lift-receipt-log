@@ -41,7 +41,7 @@ One-click demo: <https://lift-receipt-log.sociobot.in/?demo=1>
 
 ## Verification evidence
 
-- Clean clone of implementation commit `99f66ff235039e69e07972e2e3005afdd9d780d7`:
+- Clean clone of implementation commit `a03863b568c6efca0a000453b655ecca7a8bf9b4`:
   each of the 14 exact commands in `.factory/claims.json` passed separately in
   desktop Chromium and the 390 × 844 mobile project (28 executions).
 - Clean-clone `npm test`: 7 unit tests passed; static route/copy/claim checks
@@ -55,12 +55,16 @@ One-click demo: <https://lift-receipt-log.sociobot.in/?demo=1>
 - Mobile Lighthouse on `http://127.0.0.1:4173/?demo=1`: Performance 100,
   Accessibility 100, Best Practices 100, SEO 100; LCP 1.4 s, CLS 0, TBT 0 ms.
 - Production deployment used `/opt/fleet/lib/deploy-static.sh lift-receipt-log
-  dist`; initial Azure deployment ID was
-  `0fd92e88-5243-45c4-b47c-fad824c14c0d`.
+  dist`; final Azure deployment ID was
+  `3c417773-2bdc-4837-96c4-a88206ef2a53`.
 - Live `/opt/fleet/lib/verify-url.sh` passed both `/` and `/?demo=1` with HTTP
   200 and no console errors. `npm run verify:live` passed six routes, demo
   isolation, offline reload/logging, zero external demo requests, and zero
   serious/critical Axe violations after the final redeploy.
+- Final production mobile Lighthouse on `/?demo=1`: Performance 100,
+  Accessibility 100, Best Practices 100, SEO 100; LCP 1.0 s, CLS 0, TBT 0 ms.
+- The cold billing check found the exact `lift-receipt-log` catalogue entry at
+  900 USD cents. Its checkout returned HTTP 303 to the hosted Dodo checkout.
 
 Screenshots are generated at:
 

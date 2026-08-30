@@ -36,7 +36,7 @@ request origins, console output, and serious/critical Axe results.
 | F-1-20 | Removed the untested installation promise; README now claims only tested offline reload and logging. | `@claim:offline-reload` · offline screenshot · live offline flow passed |
 | F-1-21 | Kept repository/payment-provider implementation wording out of user copy. | static reviewed-copy scan · Setup screenshot via live sweep · live Setup scan passed |
 | F-1-22 | Kept service-worker implementation jargon out of README. | `.factory/copy-audit.md` · offline screenshot · live offline flow passed |
-| F-1-23 | Kept plain third-party asset wording and same-origin coverage. | `@claim:no-third-party-assets` · root screenshot · live request log had zero external requests |
+| F-1-23 | Kept plain third-party asset wording and same-origin coverage. | `@claim:no-third-party-assets` · root screenshot · live assets stayed same-origin; only the explicit Setup catalogue check used the Sociobot API |
 | F-1-24 | Kept daily license verification wording and behavior. | `@claim:pro-features` · Setup screenshot via live sweep · live Setup loaded cleanly |
 | F-1-25 | Kept unmeasured “fast” out of metadata. | `sets route titles…` · root screenshot · six live route titles passed |
 | F-1-26 | Kept all three advertised entry formats under one claim. | `@claim:keyboard-receipt` · root screenshot · live keyboard logging passed |
@@ -44,7 +44,7 @@ request origins, console output, and serious/critical Axe results.
 | F-1-28 | Kept repository payment-integration claims out of user copy. | static reviewed-copy scan · Setup screenshot via live sweep · live Setup scan passed |
 | F-1-29 | Kept unsupported Node compatibility wording removed. | `.factory/copy-audit.md` · root screenshot · deployed README source matches |
 | F-1-30 | Kept unsupported user-facing build-output promises removed. | `.factory/copy-audit.md` · root screenshot · production build created `dist/` |
-| F-1-31 | Kept asset/privacy claims narrow and fully tested. | `@claim:local-private`, `@claim:no-third-party-assets` · demo screenshot · live external request count was zero |
+| F-1-31 | Kept asset/privacy claims narrow and fully tested. | `@claim:local-private`, `@claim:no-third-party-assets` · demo screenshot · live demo external request count was zero |
 | F-1-32 | Kept the unmeasured notebook-speed comparison removed. | static reviewed-copy scan · root screenshot · live root copy passed |
 | F-1-33 | Replaced the regressed immutable label with “COMPLETED WORKOUT” and renamed the test to claim persistence only. | `@claim:keyboard-receipt`, `uses reviewed literal labels…` · receipt state covered by suite · live forbidden-copy scan passed |
 | F-1-34 | Kept unsupported merchant-of-record claims out of public copy. | static reviewed-copy scan · Setup screenshot via live sweep · live legal/Setup scan passed |
@@ -93,9 +93,10 @@ Checkout status now updates only its own live region, and
   project-specific tests were intentionally skipped.
 - `npm run build`: `dist/` created; initial JS 35.05 kB raw / 12.03 kB gzip;
   CSS 18.80 kB raw / 4.88 kB gzip.
-- Mobile Lighthouse on `/?demo=1`: Performance 100, Accessibility 100, Best
-  Practices 100, SEO 100; LCP 1.4 s, CLS 0, TBT 0 ms.
+- Final production mobile Lighthouse on `/?demo=1`: Performance 100,
+  Accessibility 100, Best Practices 100, SEO 100; LCP 1.0 s, CLS 0, TBT 0 ms.
 - `/opt/fleet/lib/verify-url.sh` passed the live root and demo with HTTP 200,
   no console errors, one H1, `lang=en`, one main landmark, and no missing alt.
-- Deployment ID: `0fd92e88-5243-45c4-b47c-fad824c14c0d`; a final redeploy was
-  made after the expanded dark-mode contrast fix.
+- The live catalogue listed `lift-receipt-log` at 900 USD cents and its exact
+  checkout returned HTTP 303 to hosted Dodo checkout.
+- Final deployment ID: `3c417773-2bdc-4837-96c4-a88206ef2a53`.

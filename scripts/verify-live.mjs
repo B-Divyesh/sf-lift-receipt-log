@@ -12,10 +12,10 @@ const errors = [];
 const externalRequests = [];
 const context = await browser.newContext({
   viewport: { width: 390, height: 844 },
-  extraHTTPHeaders: { 'Cache-Control': 'no-cache' },
 });
 const page = await context.newPage();
 let seriousAxeViolations = 0;
+let demoExternalRequests = [];
 page.on('pageerror', (error) => errors.push(String(error)));
 page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
 page.on('request', (request) => {
@@ -64,7 +64,7 @@ try {
   await page.goto(`${origin}/?demo=1`);
   await page.waitForFunction(() => document.querySelectorAll('.set-row').length === 3);
   assert.equal(await page.locator('.set-row').count(), 3);
-  const demoExternalRequests = [...externalRequests];
+  demoExternalRequests = [...externalRequests];
 
   const routes = [
     ['/', 'Set Receipt — log lifts and keep receipts'],
