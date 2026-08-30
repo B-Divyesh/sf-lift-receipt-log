@@ -10,6 +10,7 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:static": "node scripts/verify-static-routes.mjs",
+    "verify:live": "node scripts/verify-live.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {

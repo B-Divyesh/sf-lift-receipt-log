@@ -450,7 +450,7 @@ test('sets route titles, metadata, canonical URLs, legal links, and a real 404',
 test('has no serious accessibility violations on core and legal screens', async ({ page }) => {
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
-    for (const path of ['/', '/?demo=1', '/privacy', '/terms', '/not-a-real-route']) {
+    for (const path of ['/', '/?demo=1', '/?view=history', '/?view=settings', '/?demo=1&view=settings', '/privacy', '/terms', '/not-a-real-route']) {
       await page.goto(path);
       await expect(page.locator('h1')).toHaveCount(1);
       const results = await new AxeBuilder({ page }).analyze();
