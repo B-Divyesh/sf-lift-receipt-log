@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "workouts": [],
+  "aliases": [],
+  "settings": {
+    "unit": "lb",
+    "restSeconds": 120,
+    "theme": "auto"
+  }
+}

@@ -3,7 +3,7 @@ import { loadData, saveData, validateImport } from './db';
 import { canonicalExercise, parseSet } from './parser';
 import { CHECKOUT_URL, cachedUnlock, captureLicense, storeLicense, verifyLicense } from './license';
 import { csvText, formatDuration, receiptText, workoutDuration, workoutVolume } from './receipt';
-import { DEFAULT_ALIASES, type Alias, type AppData, type LiftSet, type Workout } from './types';
+import { DEFAULT_ALIASES, DEFAULT_DATA, type Alias, type AppData, type LiftSet, type Workout } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let data: AppData;
@@ -27,6 +27,8 @@ const id = () => crypto.randomUUID();
 const activeWorkout = () => data.workouts.find((workout) => !workout.endedAt);
 const dateLabel = (value: string) => new Date(value).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 const timeLabel = (value: string) => new Date(value).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+const showStatus = (message: string) => { error = ''; status = message; };
+const showError = (message: string) => { status = ''; error = message; };
 
 function shell(content: string, page: 'app' | 'legal' = 'app'): string {
   return `<header class="site-header">
@@ -146,7 +148,7 @@ function updateTimer(): void {
   if (restEndsAt && restEndsAt <= Date.now()) {
     restEndsAt = 0;
     output.textContent = 'DONE';
-    status = 'Rest complete. Ready for the next set.';
+    showStatus('Rest complete. Ready for the next set.');
     if ('vibrate' in navigator) navigator.vibrate?.([100, 80, 100]);
   }
 }
@@ -161,10 +163,10 @@ async function persist(message = ''): Promise<void> {
   try {
     await saveData(data);
     storageFailed = false;
-    if (message) status = message;
+    if (message) showStatus(message);
   } catch {
     storageFailed = true;
-    error = 'Could not save on this device. Export your data and check browser storage.';
+    showError('Could not save on this device. Export your data and check browser storage.');
   }
 }
 
@@ -205,7 +207,7 @@ async function addSet(form: HTMLFormElement): Promise<void> {
     const expression = document.querySelector<HTMLInputElement>('#set-expression');
     if (expression) { expression.value = ''; expression.focus(); }
   } catch (cause) {
-    error = cause instanceof Error ? cause.message : 'Could not log that set.';
+    showError(cause instanceof Error ? cause.message : 'Could not log that set.');
     render();
     // A parser error should not make a lifter re-enter the lift they just
     // resolved. Keep the canonical value while they correct the expression.
@@ -244,19 +246,22 @@ app.addEventListener('submit', async (event) => {
     const alias = aliasInput.value.trim().toLowerCase();
     const exercise = exerciseInput.value.trim();
     if (!alias || !exercise) return;
-    if (data.aliases.some((item) => item.alias.toLowerCase() === alias)) { error = 'That short code already exists.'; render(); return; }
+    if (data.aliases.some((item) => item.alias.toLowerCase() === alias)) { showError('That short code already exists.'); render(); return; }
     data.aliases.push({ id: id(), alias, exercise: canonicalExercise(exercise, []) });
     await persist('Alias added.'); render();
   }
   if (form.id === 'custom-rest-form') {
     const seconds = Number(form.querySelector<HTMLInputElement>('#custom-rest')!.value);
-    if (seconds < 15 || seconds > 900) { error = 'Choose 15 to 900 seconds.'; render(); return; }
+    if (seconds < 15 || seconds > 900) { showError('Choose 15 to 900 seconds.'); render(); return; }
     data.settings.restSeconds = seconds; await persist('Custom rest saved.'); render();
   }
   if (form.id === 'license-form') {
     const token = form.querySelector<HTMLInputElement>('#license-token')!.value.trim();
-    storeLicense(token); status = 'Checking license…'; render();
-    isPro = await verifyLicense(true); error = isPro ? '' : 'That license is not active. Check the token and try again.'; status = isPro ? 'Pro unlocked.' : ''; render();
+    storeLicense(token); showStatus('Checking license…'); render();
+    isPro = await verifyLicense(true);
+    if (isPro) showStatus('Pro unlocked.');
+    else showError('That license is not active. Check the token and try again.');
+    render();
   }
 });
 
@@ -273,7 +278,7 @@ app.addEventListener('change', async (event) => {
       const imported = validateImport(backup);
       if (!confirm(`Replace this device’s log with ${imported.workouts.length} imported workout(s)?`)) return;
       data = imported; await persist('Backup imported.'); render();
-    } catch (cause) { error = cause instanceof Error ? cause.message : 'Could not read that backup.'; render(); }
+    } catch (cause) { showError(cause instanceof Error ? cause.message : 'Could not read that backup.'); render(); }
   }
 });
 
@@ -293,7 +298,13 @@ app.addEventListener('click', async (event) => {
   if (target.dataset.share) {
     const workout = data.workouts.find((item) => item.id === target.dataset.share); if (!workout) return;
     const text = receiptText(workout);
-    try { if (navigator.share) await navigator.share({ title: 'My Set Receipt', text }); else { await navigator.clipboard.writeText(text); status = 'Receipt copied.'; render(); } } catch (cause) { if ((cause as DOMException).name !== 'AbortError') { error = 'Sharing failed. Try Print / save PDF.'; render(); } }
+    try {
+      if (navigator.share) { await navigator.share({ title: 'My Set Receipt', text }); showStatus('Receipt shared.'); }
+      else { await navigator.clipboard.writeText(text); showStatus('Receipt copied.'); }
+      render();
+    } catch (cause) {
+      if ((cause as DOMException).name !== 'AbortError') { showError('Sharing failed. Try Print / save PDF.'); render(); }
+    }
     return;
   }
   switch (target.dataset.action) {
@@ -305,10 +316,27 @@ app.addEventListener('click', async (event) => {
     case 'undo-delete': {
       if (!undoSet) break; const workout = data.workouts.find((item) => item.id === undoSet!.workoutId); if (workout) workout.sets.splice(undoSet.index, 0, undoSet.set); undoSet = null; await persist('Set restored.'); render(); break;
     }
-    case 'export-json': download(`set-receipt-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2), 'application/json'); status = 'JSON backup exported.'; render(); break;
-    case 'export-csv': download(`set-receipt-${new Date().toISOString().slice(0, 10)}.csv`, csvText(data.workouts), 'text/csv'); status = 'CSV exported.'; render(); break;
-    case 'erase-data': if (confirm(`Erase ${data.workouts.length} workout(s), all aliases, and settings from this device? Export first if you need a backup.`)) { data = structuredClone({ ...data, workouts: [], aliases: DEFAULT_ALIASES }); await persist('All local workout data erased.'); view = 'log'; render(); } break;
-    case 'verify-license': isPro = await verifyLicense(true); status = isPro ? 'License is active.' : ''; error = isPro ? '' : 'License is no longer active.'; render(); break;
+    case 'export-json': download(`set-receipt-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2), 'application/json'); showStatus('JSON backup exported.'); render(); break;
+    case 'export-csv': download(`set-receipt-${new Date().toISOString().slice(0, 10)}.csv`, csvText(data.workouts), 'text/csv'); showStatus('CSV exported.'); render(); break;
+    case 'erase-data':
+      if (confirm(`Erase ${data.workouts.length} workout(s), all aliases, and settings from this device? Export first if you need a backup.`)) {
+        data = structuredClone(DEFAULT_DATA);
+        selectedReceipt = null;
+        restEndsAt = 0;
+        undoSet = null;
+        window.clearInterval(restTimer);
+        window.clearTimeout(undoTimeout);
+        await persist('All local workout data erased.');
+        view = 'log';
+        render();
+      }
+      break;
+    case 'verify-license':
+      isPro = await verifyLicense(true);
+      if (isPro) showStatus('License is active.');
+      else showError('License is no longer active.');
+      render();
+      break;
     case 'refresh-app': {
       const waiting = serviceWorkerRegistration?.waiting;
       if (!waiting) { location.reload(); break; }
@@ -351,9 +379,9 @@ async function init(): Promise<void> {
   renderLoading();
   captureLicense();
   isPro = cachedUnlock();
-  try { data = await loadData(); } catch { data = structuredClone({ ...({ version: 1, workouts: [], aliases: DEFAULT_ALIASES, settings: { unit: 'lb', restSeconds: 120, theme: 'auto' } } as AppData) }); storageFailed = true; error = 'Local storage is unavailable. Logging will last only for this tab.'; }
+  try { data = await loadData(); } catch { data = structuredClone(DEFAULT_DATA); storageFailed = true; showError('Local storage is unavailable. Logging will last only for this tab.'); }
   render();
-  verifyLicense().then((valid) => { if (valid !== isPro) { isPro = valid; if (!valid) error = 'License is no longer active.'; render(); } });
+  verifyLicense().then((valid) => { if (valid !== isPro) { isPro = valid; if (!valid) showError('License is no longer active.'); render(); } });
   registerServiceWorker().catch(() => { /* Logging still works without installation. */ });
 }
 

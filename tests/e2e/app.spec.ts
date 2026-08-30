@@ -1,5 +1,26 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+
+async function expectMinimumTouchTargets(page: Page, state: string): Promise<void> {
+  const failures = await page.locator('a, button, select, textarea, input:not([type="radio"]):not([type="file"]), summary, label.file-button').evaluateAll((elements) => elements.flatMap((element) => {
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    if (style.display === 'none' || style.visibility === 'hidden' || rect.width === 0 || rect.height === 0) return [];
+    if (rect.width >= 44 && rect.height >= 44) return [];
+    const label = element.getAttribute('aria-label') || element.textContent?.trim() || element.getAttribute('name') || element.tagName;
+    return [`${label}: ${rect.width.toFixed(3)} × ${rect.height.toFixed(3)}`];
+  }));
+  expect(failures, `${state} must keep every visible target at least 44 × 44 CSS px`).toEqual([]);
+}
+
+async function expectPrimaryNavigationSpacing(page: Page, state: string): Promise<void> {
+  const gaps = await page.locator('.site-header nav .nav-button').evaluateAll((buttons) => buttons.slice(1).map((button, index) => {
+    const previous = buttons[index].getBoundingClientRect();
+    return button.getBoundingClientRect().left - previous.right;
+  }));
+  expect(gaps.length, `${state} must expose all primary navigation gaps`).toBe(2);
+  for (const gap of gaps) expect(gap, `${state} primary navigation gap`).toBeGreaterThanOrEqual(8);
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -83,6 +104,75 @@ test('explains how to recover from an invalid JSON import', async ({ page }) => 
   await expect(page.locator('.toast')).toContainText('That file is not valid JSON. Choose a Set Receipt backup exported by this app and try again.');
 });
 
+test('erase all local data resets workouts, aliases, and settings after reload', async ({ page }) => {
+  await page.getByLabel('Exercise').fill('sq');
+  await page.getByLabel('Weight × reps').fill('225x5');
+  await page.getByLabel('Weight × reps').press('Enter');
+  await page.getByRole('button', { name: 'Setup' }).click();
+  await page.getByLabel('Kilograms (kg)').check();
+  await page.locator('#rest-select').selectOption('180');
+  await page.getByLabel('Short code').fill('rdl');
+  await page.getByLabel('Exercise', { exact: true }).fill('Romanian deadlift');
+  await page.getByRole('button', { name: 'Add alias' }).click();
+
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('1 workout(s), all aliases, and settings');
+    await dialog.accept();
+  });
+  await page.getByRole('button', { name: 'Erase all local data' }).click();
+  await expect(page.locator('.toast')).toHaveText('All local workout data erased.');
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Setup' }).click();
+  await expect(page.getByLabel('Pounds (lb)')).toBeChecked();
+  await expect(page.getByLabel('Kilograms (kg)')).not.toBeChecked();
+  await expect(page.locator('#rest-select')).toHaveValue('120');
+  await expect(page.locator('.alias-list code')).toHaveText(['sq', 'bp', 'dl', 'ohp']);
+  await expect(page.getByText('→ Romanian deadlift')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Receipts' }).click();
+  await expect(page.getByText('Finish a workout to file it here.')).toBeVisible();
+});
+
+test('successful recovery actions replace stale import and alias errors', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://127.0.0.1:4173' });
+  await page.evaluate(() => Object.defineProperty(navigator, 'share', { configurable: true, value: undefined }));
+  await page.getByLabel('Exercise').fill('sq');
+  await page.getByLabel('Weight × reps').fill('225x5');
+  await page.getByLabel('Weight × reps').press('Enter');
+  await page.getByRole('button', { name: 'Setup' }).click();
+
+  const malformed = 'tests/fixtures/not-a-backup.json';
+  await page.locator('#import-file').setInputFiles(malformed);
+  await expect(page.locator('.toast')).toHaveText('That file is not valid JSON. Choose a Set Receipt backup exported by this app and try again.');
+
+  const jsonDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export JSON' }).click();
+  await jsonDownload;
+  await expect(page.locator('.toast')).toHaveText('JSON backup exported.');
+
+  await page.getByRole('button', { name: 'Log' }).click();
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.locator('.toast')).toHaveText('Workout finished. Receipt filed.');
+  await page.getByRole('button', { name: 'Share receipt' }).click();
+  await expect(page.locator('.toast')).toHaveText('Receipt copied.');
+
+  await page.getByRole('button', { name: 'Setup' }).click();
+  await page.getByLabel('Short code').fill('sq');
+  await page.getByLabel('Exercise', { exact: true }).fill('Back squat');
+  await page.getByRole('button', { name: 'Add alias' }).click();
+  await expect(page.locator('.toast')).toHaveText('That short code already exists.');
+  await page.getByLabel('Short code').fill('rdl');
+  await page.getByLabel('Exercise', { exact: true }).fill('Romanian deadlift');
+  await page.getByRole('button', { name: 'Add alias' }).click();
+  await expect(page.locator('.toast')).toHaveText('Alias added.');
+
+  await page.locator('#import-file').setInputFiles(malformed);
+  await expect(page.locator('.toast')).toContainText('not valid JSON');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.locator('#import-file').setInputFiles('tests/fixtures/valid-empty-backup.json');
+  await expect(page.locator('.toast')).toHaveText('Backup imported.');
+});
+
 test('has no serious accessibility violations on core and legal screens', async ({ page }) => {
   for (const path of ['/', '/privacy', '/terms']) {
     await page.goto(path);
@@ -150,4 +240,41 @@ test('mobile viewport has no horizontal page overflow', async ({ page }, testInf
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.getByRole('button', { name: /Log set/ })).toBeVisible();
+});
+
+test('mobile targets and navigation spacing pass in every reported state', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Mobile-only touch geometry regression');
+
+  await expectMinimumTouchTargets(page, 'normal logger');
+  await expectPrimaryNavigationSpacing(page, 'normal logger');
+
+  await page.getByLabel('Exercise').fill('sq');
+  await page.getByLabel('Weight × reps').fill('bad');
+  await page.getByLabel('Weight × reps').press('Enter');
+  await expect(page.locator('#entry-error')).toBeVisible();
+  await expectMinimumTouchTargets(page, 'validation error');
+
+  await page.getByLabel('Weight × reps').fill('225x5');
+  await page.getByLabel('Weight × reps').press('Enter');
+  await page.getByRole('button', { name: 'Remove Squat set' }).click();
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible();
+  await expectMinimumTouchTargets(page, 'undo notice');
+
+  await page.getByRole('button', { name: 'Setup' }).click();
+  await expectMinimumTouchTargets(page, 'settings');
+  await expectPrimaryNavigationSpacing(page, 'settings');
+
+  for (const path of ['/privacy', '/terms']) {
+    await page.goto(path);
+    await expectMinimumTouchTargets(page, path);
+  }
+
+  await page.goto('/');
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.reload();
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+  await page.evaluate(() => { document.cookie = 'set-receipt-test-update=1; path=/'; });
+  await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration())?.update(); });
+  await expect(page.locator('#update-toast')).toBeVisible();
+  await expectMinimumTouchTargets(page, 'service-worker update');
 });
