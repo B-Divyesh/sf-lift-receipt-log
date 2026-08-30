@@ -23,6 +23,14 @@ async function expectPrimaryNavigationSpacing(page: Page, state: string): Promis
 }
 
 test.beforeEach(async ({ page }) => {
+  // Keep routine browser tests local. Claims that exercise an available catalogue
+  // install a later, test-specific route with their recorded response.
+  await page.route('https://api.sociobot.in/api/v1/products', (route) => route.fulfill({
+    status: 503,
+    contentType: 'application/json',
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    body: '{"error":"unavailable"}',
+  }));
   await page.goto('/');
   await page.evaluate(() => indexedDB.deleteDatabase('set-receipt'));
   await page.reload();
@@ -456,6 +464,10 @@ test('sets route titles, metadata, canonical URLs, legal links, and a real 404',
 });
 
 test('has no serious accessibility violations on core and legal screens', async ({ page }) => {
+  // Axe scans the complete two-theme, eight-route matrix. It has exceeded the
+  // runner's 30 s default under CPU contention despite finding no violations.
+  // Keep the complete release matrix while giving this bounded check enough time.
+  test.setTimeout(60_000);
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
     for (const path of ['/', '/?demo=1', '/?view=history', '/?view=settings', '/?demo=1&view=settings', '/privacy', '/terms', '/not-a-real-route']) {
@@ -589,6 +601,11 @@ test('mobile targets and navigation spacing pass in every reported state', async
     await page.goto(path);
     await expectMinimumTouchTargets(page, path);
   }
+
+  const notFound = await page.goto('/definitely-missing');
+  expect(notFound?.status()).toBe(404);
+  await expect(page.getByRole('heading', { name: 'That page is not in your log.' })).toBeVisible();
+  await expectMinimumTouchTargets(page, '404 recovery');
 
   await page.goto('/');
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
